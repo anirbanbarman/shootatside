@@ -13,10 +13,12 @@ export function AdminDashboard() {
   const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, assignTeam, resetDemoProjects, seedDemoProject } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
+  const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
   const [quoteError, setQuoteError] = useState("");
   const [quoteSuccess, setQuoteSuccess] = useState("");
   const [negotiationAmount, setNegotiationAmount] = useState("");
   const [negotiationComment, setNegotiationComment] = useState("");
+  const [negotiationAdvancePercent, setNegotiationAdvancePercent] = useState("30");
   const [negotiationError, setNegotiationError] = useState("");
   const [negotiationSuccess, setNegotiationSuccess] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
@@ -48,9 +50,16 @@ export function AdminDashboard() {
 
   const handleSendQuote = () => {
     const amount = Number(quoteAmount);
+    const advancePercent = Number(quoteAdvancePercent);
 
     if (!quoteAmount.trim() || Number.isNaN(amount) || amount <= 0) {
       setQuoteError("Quote amount is required and must be greater than 0.");
+      setQuoteSuccess("");
+      return;
+    }
+
+    if (Number.isNaN(advancePercent) || advancePercent < 0 || advancePercent > 100) {
+      setQuoteError("Advance payment percentage must be between 0 and 100.");
       setQuoteSuccess("");
       return;
     }
@@ -61,18 +70,26 @@ export function AdminDashboard() {
       return;
     }
 
-    sendQuote(selectedProject.id, amount, quoteComment.trim());
+    sendQuote(selectedProject.id, amount, quoteComment.trim(), advancePercent);
     setQuoteError("");
     setQuoteSuccess("Quote sent successfully.");
     setQuoteAmount("");
     setQuoteComment("");
+    setQuoteAdvancePercent("30");
   };
 
   const handleSendNegotiation = () => {
     const amount = Number(negotiationAmount);
+    const advancePercent = Number(negotiationAdvancePercent);
 
     if (!negotiationAmount.trim() || Number.isNaN(amount) || amount <= 0) {
       setNegotiationError("Negotiation amount is required and must be greater than 0.");
+      setNegotiationSuccess("");
+      return;
+    }
+
+    if (Number.isNaN(advancePercent) || advancePercent < 0 || advancePercent > 100) {
+      setNegotiationError("Advance payment percentage must be between 0 and 100.");
       setNegotiationSuccess("");
       return;
     }
@@ -83,11 +100,12 @@ export function AdminDashboard() {
       return;
     }
 
-    sendNegotiation(selectedProject.id, amount, negotiationComment.trim());
+    sendNegotiation(selectedProject.id, amount, negotiationComment.trim(), advancePercent);
     setNegotiationError("");
     setNegotiationSuccess("Negotiation sent successfully.");
     setNegotiationAmount("");
     setNegotiationComment("");
+    setNegotiationAdvancePercent("30");
   };
 
   const handleAssignTeam = () => {
@@ -183,6 +201,8 @@ export function AdminDashboard() {
                 <p className="eyebrow">Quote Information</p>
                 <div className="quote-box">
                   <div className="quote-row"><strong>Quoted Amount</strong> <span>{formatCurrency(selectedProject.initialQuote.amount)}</span></div>
+                  <div className="quote-row"><strong>Advance Required</strong> <span>{selectedProject.initialQuote.advancePercent ?? selectedProject.payment?.advancePercent ?? 30}%</span></div>
+                  <div className="quote-row"><strong>Advance Amount</strong> <span>{formatCurrency(selectedProject.payment?.amount ?? Math.round((selectedProject.initialQuote.amount * (selectedProject.initialQuote.advancePercent ?? selectedProject.payment?.advancePercent ?? 30)) / 100))}</span></div>
                   <div className="quote-row"><strong>Sent On</strong> <span>{formatDate(selectedProject.initialQuote.sentAt)}</span></div>
                   <div className="quote-comment">
                     <strong>Admin Comment</strong>
@@ -197,6 +217,10 @@ export function AdminDashboard() {
                   <div>
                     <label>Quote Amount</label>
                     <input type="number" min="1" value={quoteAmount} onChange={(event) => setQuoteAmount(event.target.value)} placeholder="75000" />
+                  </div>
+                  <div>
+                    <label>Advance Payment (%)</label>
+                    <input type="number" min="0" max="100" value={quoteAdvancePercent} onChange={(event) => setQuoteAdvancePercent(event.target.value)} placeholder="30" />
                   </div>
                   <div>
                     <label>Comment</label>
@@ -222,6 +246,10 @@ export function AdminDashboard() {
                     <input type="number" min="1" value={negotiationAmount} onChange={(event) => setNegotiationAmount(event.target.value)} placeholder="65000" />
                   </div>
                   <div>
+                    <label>Advance Payment (%)</label>
+                    <input type="number" min="0" max="100" value={negotiationAdvancePercent} onChange={(event) => setNegotiationAdvancePercent(event.target.value)} placeholder="30" />
+                  </div>
+                  <div>
                     <label>Admin Comment</label>
                     <textarea rows={4} value={negotiationComment} onChange={(event) => setNegotiationComment(event.target.value)} placeholder="We can offer a discounted package at ₹65,000." />
                   </div>
@@ -237,6 +265,8 @@ export function AdminDashboard() {
                 <p className="eyebrow">Negotiation</p>
                 <div className="quote-box">
                   <div className="quote-row"><strong>Negotiated Amount</strong> <span>{formatCurrency(selectedProject.negotiation.amount)}</span></div>
+                  <div className="quote-row"><strong>Advance Required</strong> <span>{selectedProject.negotiation.advancePercent ?? selectedProject.payment?.advancePercent ?? 30}%</span></div>
+                  <div className="quote-row"><strong>Advance Amount</strong> <span>{formatCurrency(selectedProject.payment?.amount ?? Math.round((selectedProject.negotiation.amount * (selectedProject.negotiation.advancePercent ?? selectedProject.payment?.advancePercent ?? 30)) / 100))}</span></div>
                   <div className="quote-row"><strong>Sent On</strong> <span>{formatDate(selectedProject.negotiation.sentAt)}</span></div>
                   <div className="quote-comment">
                     <strong>Admin Comment</strong>

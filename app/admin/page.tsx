@@ -5,9 +5,13 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { AdminLoginPage } from "@/components/auth/AdminLoginPage";
 
 export default function AdminPage() {
-  const { currentUser } = useProjectContext();
+  const { currentUser, isReady } = useProjectContext();
 
-  if (!currentUser) {
+  if (!isReady) {
+    return null;
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
     return <AdminLoginPage />;
   }
 

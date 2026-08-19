@@ -17,12 +17,16 @@ export function formatDate(dateValue: string): string {
 }
 
 export function getProjectStatus(project: Project): ProjectStatus {
-  if (project.negotiationResponse?.type === "ACCEPTED") {
+  if (project.payment?.status === "PAID" && (project.clientResponse?.type === "ACCEPTED" || project.negotiationResponse?.type === "ACCEPTED")) {
     return "PROJECT_CONFIRMED";
   }
 
+  if (project.negotiationResponse?.type === "ACCEPTED") {
+    return "NEGOTIATION_ACCEPTED";
+  }
+
   if (project.clientResponse?.type === "ACCEPTED" && !project.negotiation) {
-    return "PROJECT_CONFIRMED";
+    return "QUOTE_ACCEPTED";
   }
 
   if (project.negotiationResponse?.type === "REJECTED") {
@@ -61,7 +65,7 @@ export function getStatusLabel(status: ProjectStatus): string {
 
 export function getProjectTimeline(project: Project): TimelineEntry[] {
   const entries: TimelineEntry[] = [
-    { title: "Project Created" },
+    { title: "Project Created", timestamp: new Date().toISOString() },
   ];
 
   if (project.initialQuote) {
@@ -69,6 +73,7 @@ export function getProjectTimeline(project: Project): TimelineEntry[] {
       title: "Quote Sent",
       detail: project.initialQuote.comment,
       amount: project.initialQuote.amount,
+      timestamp: project.initialQuote.sentAt,
     });
   }
 
@@ -76,6 +81,7 @@ export function getProjectTimeline(project: Project): TimelineEntry[] {
     entries.push({
       title: "Client Rejected",
       detail: project.clientResponse.comment || "No reason provided.",
+      timestamp: project.clientResponse.respondedAt,
     });
   }
 
@@ -84,26 +90,36 @@ export function getProjectTimeline(project: Project): TimelineEntry[] {
       title: "Negotiation Sent",
       detail: project.negotiation.comment,
       amount: project.negotiation.amount,
+      timestamp: project.negotiation.sentAt,
     });
   }
 
   if (project.negotiationResponse?.type === "ACCEPTED") {
-    entries.push({ title: "Client Accepted" });
+    entries.push({ title: "Client Accepted", timestamp: project.negotiationResponse.respondedAt });
   }
 
   if (project.negotiationResponse?.type === "REJECTED") {
     entries.push({
       title: "Negotiation Rejected",
       detail: project.negotiationResponse.comment || "No reason provided.",
+      timestamp: project.negotiationResponse.respondedAt,
     });
   }
 
   if (project.clientResponse?.type === "ACCEPTED") {
-    entries.push({ title: "Client Accepted" });
+    entries.push({ title: "Client Accepted", timestamp: project.clientResponse.respondedAt });
+  }
+
+  if (project.payment) {
+    entries.push({
+      title: project.payment.status === "PAID" ? "Advance Payment Received" : "Advance Payment Pending",
+      detail: `${project.payment.advancePercent}% advance (${formatCurrency(project.payment.amount)})`,
+      timestamp: project.payment.paidAt ?? new Date().toISOString(),
+    });
   }
 
   if (getProjectStatus(project) === "PROJECT_CONFIRMED") {
-    entries.push({ title: "Project Confirmed" });
+    entries.push({ title: "Project Confirmed", timestamp: project.payment?.paidAt ?? new Date().toISOString() });
   }
 
   return entries;

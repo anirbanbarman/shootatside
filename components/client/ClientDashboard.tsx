@@ -11,10 +11,11 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatCurrency, formatDate } from "@/utils/status";
 
 export function ClientDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance } = useProjectContext();
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isRequestFormModalOpen, setRequestFormModalOpen] = useState(false);
+  const [isPayAdvanceModalOpen, setPayAdvanceModalOpen] = useState(false);
   const [rejectText, setRejectText] = useState("");
   const [negotiationRejectText, setNegotiationRejectText] = useState("");
   const [isNegotiationRejectModalOpen, setNegotiationRejectModalOpen] = useState(false);
@@ -34,11 +35,19 @@ export function ClientDashboard() {
   }
 
   const currentQuote = selectedProject.negotiation ?? selectedProject.initialQuote;
+  const advancePercent = currentQuote?.advancePercent ?? selectedProject.payment?.advancePercent ?? 30;
+  const advanceAmount = selectedProject.payment?.amount ?? Math.round(((currentQuote?.amount ?? 0) * advancePercent) / 100);
 
   const handleAcceptQuote = () => {
     acceptQuote(selectedProject.id);
-    setFeedback("Quotation accepted successfully.");
+    setFeedback("Quotation accepted successfully. Please complete the advance payment to confirm the booking.");
     setConfirmModalOpen(false);
+  };
+
+  const handlePayAdvance = () => {
+    payAdvance(selectedProject.id);
+    setFeedback("Advance payment received. Booking is now confirmed.");
+    setPayAdvanceModalOpen(false);
   };
 
   const handleRejectQuote = () => {
@@ -124,6 +133,8 @@ export function ClientDashboard() {
                 <div className="quote-box">
                   <div className="quote-row"><strong>Photography Package</strong></div>
                   <div className="quote-row"><strong>Quoted Amount</strong> <span>{formatCurrency(currentQuote.amount)}</span></div>
+                  <div className="quote-row"><strong>Advance Required</strong> <span>{advancePercent}%</span></div>
+                  <div className="quote-row"><strong>Advance Amount</strong> <span>{formatCurrency(advanceAmount)}</span></div>
                   {currentQuote.comment ? (
                     <div className="quote-comment">
                       <strong>Admin Comment</strong>
@@ -155,16 +166,32 @@ export function ClientDashboard() {
                   </div>
                 )}
 
-                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" ? (
-                  <div className="success-box">Quote Accepted. Your photography project has been confirmed.</div>
+                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && selectedProject.payment?.status !== "PAID" ? (
+                  <div className="cta-row">
+                    <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
+                      Pay Advance {formatCurrency(advanceAmount)}
+                    </button>
+                  </div>
+                ) : null}
+
+                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && selectedProject.payment?.status === "PAID" ? (
+                  <div className="success-box">Advance payment received. Your booking is now confirmed.</div>
                 ) : null}
 
                 {!selectedProject.negotiation && selectedProject.clientResponse?.type === "REJECTED" ? (
                   <div className="warning-box">Client rejected the quotation. Awaiting negotiation.</div>
                 ) : null}
 
-                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" ? (
-                  <div className="success-box">Negotiation Accepted. Project confirmed.</div>
+                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && selectedProject.payment?.status !== "PAID" ? (
+                  <div className="cta-row">
+                    <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
+                      Pay Advance {formatCurrency(advanceAmount)}
+                    </button>
+                  </div>
+                ) : null}
+
+                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && selectedProject.payment?.status === "PAID" ? (
+                  <div className="success-box">Advance payment received. Negotiation accepted and booking confirmed.</div>
                 ) : null}
 
                 {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "REJECTED" ? (
@@ -230,6 +257,27 @@ export function ClientDashboard() {
             placeholder="Please share why this quote does not work for your budget or requirements."
           />
           {error ? <p className="error-text">{error}</p> : null}
+        </div>
+      </Modal>
+
+      <Modal
+        title="Pay Advance"
+        open={isPayAdvanceModalOpen}
+        onClose={() => setPayAdvanceModalOpen(false)}
+        actions={
+          <>
+            <button type="button" className="secondary-button" onClick={() => setPayAdvanceModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className="success-button" onClick={handlePayAdvance}>
+              Pay {formatCurrency(advanceAmount)}
+            </button>
+          </>
+        }
+      >
+        <div className="form-stack">
+          <p>Advance payment of {advancePercent}% is required to confirm this booking.</p>
+          <p><strong>Amount to pay:</strong> {formatCurrency(advanceAmount)}</p>
         </div>
       </Modal>
 

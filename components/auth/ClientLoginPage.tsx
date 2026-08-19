@@ -2,23 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
 export function ClientLoginPage() {
   const router = useRouter();
-  const { loginClient, currentUser } = useProjectContext();
+  const { loginClient } = useProjectContext();
   const [name, setName] = useState("Aisha Khan");
   const [email, setEmail] = useState("aisha.khan@example.com");
   const [phone, setPhone] = useState("+91 99887 66554");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (currentUser) {
-      router.push("/");
-    }
-  }, [currentUser, router]);
 
   const handleLogin = () => {
     if (!name.trim() || !email.trim() || !phone.trim()) {
@@ -31,7 +25,7 @@ export function ClientLoginPage() {
       email: email.trim(),
       phone: phone.trim(),
     });
-    router.push("/");
+    router.replace("/client");
   };
 
   return (

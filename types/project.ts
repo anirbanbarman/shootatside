@@ -23,12 +23,21 @@ export interface Quote {
   amount: number;
   comment: string;
   sentAt: string;
+  advancePercent?: number;
 }
 
 export interface Negotiation {
   amount: number;
   comment: string;
   sentAt: string;
+  advancePercent?: number;
+}
+
+export interface AdvancePayment {
+  advancePercent: number;
+  amount: number;
+  status: "PENDING" | "PAID";
+  paidAt?: string;
 }
 
 export interface ClientResponse {
@@ -58,6 +67,7 @@ export interface Project {
   clientResponse?: ClientResponse;
   negotiation?: Negotiation;
   negotiationResponse?: ClientResponse;
+  payment?: AdvancePayment;
   teamAssignment?: TeamAssignment;
 }
 
@@ -70,4 +80,5 @@ export interface TimelineEntry {
   title: string;
   detail?: string;
   amount?: number;
+  timestamp?: string;
 }

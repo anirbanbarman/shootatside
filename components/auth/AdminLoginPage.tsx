@@ -2,35 +2,41 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
 export function AdminLoginPage() {
   const router = useRouter();
-  const { loginAdmin, currentUser } = useProjectContext();
+  const { loginAdmin } = useProjectContext();
   const [email, setEmail] = useState("admin@ani.photography.com");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (currentUser) {
-      router.push("/admin");
-    }
-  }, [currentUser, router]);
-
   const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password.trim();
+
+    if (!normalizedEmail || !normalizedPassword) {
       setError("Please enter your email and password.");
+      return;
+    }
+
+    const validEmail = normalizedEmail.toLowerCase() === "admin@ani.photography.com";
+    const validPassword = normalizedPassword === "admin123";
+
+    if (!validEmail || !validPassword) {
+      setError("Invalid credentials. Use the demo admin login details below.");
       return;
     }
 
     loginAdmin({
       name: "Ani Barman",
-      email: email.trim(),
+      email: normalizedEmail,
       phone: "8906349799",
+      role: "admin",
     });
-    router.push("/admin");
+    router.replace("/admin");
   };
 
   return (

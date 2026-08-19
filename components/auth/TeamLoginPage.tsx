@@ -2,22 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
 export function TeamLoginPage() {
   const router = useRouter();
-  const { loginTeam, currentUser } = useProjectContext();
+  const { loginTeam } = useProjectContext();
   const [name, setName] = useState("Aman Roy");
   const [code, setCode] = useState("TEAM-2026");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (currentUser) {
-      router.push("/team");
-    }
-  }, [currentUser, router]);
 
   const handleLogin = () => {
     if (!name.trim() || !code.trim()) {
@@ -31,7 +25,7 @@ export function TeamLoginPage() {
       phone: "team-access",
       code: code.trim(),
     });
-    router.push("/team");
+    router.replace("/team");
   };
 
   return (

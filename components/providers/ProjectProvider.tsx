@@ -13,10 +13,13 @@ import {
 import { mockProjects } from "@/data/mockProjects";
 import type { Project, ViewMode } from "@/types/project";
 
+type UserRole = "admin" | "client" | "team";
+
 interface SessionUser {
   name: string;
   email: string;
   phone: string;
+  role?: UserRole;
 }
 
 type DemoScenario = "pending" | "quote" | "negotiation" | "confirmed";
@@ -25,6 +28,7 @@ interface ProjectContextValue {
   view: ViewMode;
   setView: (mode: ViewMode) => void;
   isLoggedIn: boolean;
+  isReady: boolean;
   activeRole: ViewMode | "guest";
   currentUser: SessionUser | null;
   loginAdmin: (user: SessionUser) => void;
@@ -46,12 +50,13 @@ interface ProjectContextValue {
   }) => void;
   resetDemoProjects: () => void;
   seedDemoProject: (scenario: DemoScenario) => void;
-  sendQuote: (projectId: string, amount: number, comment: string) => void;
+  sendQuote: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
   acceptQuote: (projectId: string) => void;
   rejectQuote: (projectId: string, comment: string) => void;
-  sendNegotiation: (projectId: string, amount: number, comment: string) => void;
+  sendNegotiation: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
   acceptNegotiation: (projectId: string) => void;
   rejectNegotiation: (projectId: string, comment: string) => void;
+  payAdvance: (projectId: string) => void;
   assignTeam: (projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => void;
 }
 
@@ -63,6 +68,11 @@ const STORAGE_KEYS = {
   user: "shootatside-current-user",
   roleState: "shootatside-role-state",
 } as const;
+
+const DEFAULT_ROLE_STATE = {
+  view: "admin" as ViewMode,
+  activeRole: "admin" as ViewMode | "guest",
+};
 
 function readStoredValue<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
@@ -77,73 +87,109 @@ function readStoredValue<T>(key: string, fallback: T): T {
   }
 }
 
+function writeStoredValue<T>(key: string, value: T | null | undefined) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (value === null || value === undefined) {
+    window.localStorage.removeItem(key);
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(value));
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const defaultRoleState = { view: "admin" as ViewMode, activeRole: "admin" as ViewMode | "guest" };
   const [view, setView] = useState<ViewMode>("admin");
   const [activeRole, setActiveRole] = useState<ViewMode | "guest">("admin");
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0]?.id ?? "");
+  const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
+  const syncFromStorage = useCallback(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    const storedRoleState = readStoredValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, defaultRoleState);
+    const storedRoleState = readStoredValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, DEFAULT_ROLE_STATE);
     const storedUser = readStoredValue<SessionUser | null>(STORAGE_KEYS.user, null);
+    const normalizedUser = storedUser
+      ? {
+          name: storedUser.name ?? "",
+          email: storedUser.email ?? "",
+          phone: storedUser.phone ?? "",
+          role: storedUser.role ?? (storedRoleState.activeRole === "admin" ? "admin" : storedRoleState.activeRole === "client" ? "client" : "team"),
+        }
+      : null;
     const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects);
     const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
 
     setView(storedRoleState.view ?? "admin");
     setActiveRole(storedRoleState.activeRole ?? "admin");
-    setCurrentUser(storedUser);
+    setCurrentUser(normalizedUser);
     setProjects(storedProjects.length > 0 ? storedProjects : mockProjects);
     setSelectedProjectId(storedSelectedProject ?? mockProjects[0]?.id ?? "");
+    setIsReady(true);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    syncFromStorage();
+  }, [syncFromStorage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isReady) {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(projects));
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.user || event.key === STORAGE_KEYS.roleState || event.key === STORAGE_KEYS.selectedProjectId || !event.key) {
+        syncFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [isReady, syncFromStorage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isReady) {
+      return;
+    }
+
+    writeStoredValue(STORAGE_KEYS.projects, projects);
     if (selectedProjectId) {
-      window.localStorage.setItem(STORAGE_KEYS.selectedProjectId, JSON.stringify(selectedProjectId));
+      writeStoredValue(STORAGE_KEYS.selectedProjectId, selectedProjectId);
     } else {
       window.localStorage.removeItem(STORAGE_KEYS.selectedProjectId);
     }
+
     if (currentUser) {
-      window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(currentUser));
+      writeStoredValue(STORAGE_KEYS.user, currentUser);
     } else {
       window.localStorage.removeItem(STORAGE_KEYS.user);
     }
 
-    window.localStorage.setItem(
-      STORAGE_KEYS.roleState,
-      JSON.stringify({
-        view,
-        activeRole,
-      }),
-    );
-  }, [activeRole, currentUser, projects, selectedProjectId, view]);
+    writeStoredValue(STORAGE_KEYS.roleState, { view, activeRole });
+  }, [activeRole, currentUser, isReady, projects, selectedProjectId, view]);
 
   const isLoggedIn = Boolean(currentUser);
 
   const loginAdmin = useCallback((user: SessionUser) => {
-    setCurrentUser(user);
+    setCurrentUser({ ...user, role: "admin" });
     setActiveRole("admin");
     setView("admin");
   }, []);
 
   const loginClient = useCallback((user: SessionUser) => {
-    setCurrentUser(user);
+    setCurrentUser({ ...user, role: "client" });
     setActiveRole("client");
     setView("client");
   }, []);
 
   const loginTeam = useCallback((user: SessionUser & { code: string }) => {
-    setCurrentUser({ name: user.name, email: user.email, phone: user.phone });
+    setCurrentUser({ name: user.name, email: user.email, phone: user.phone, role: "team" });
     setActiveRole("team");
     setView("team");
   }, []);
@@ -183,7 +229,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setProjects((current) => [generatedProject, ...current]);
       setSelectedProjectId(generatedProject.id);
 
-      setCurrentUser({ name: input.name, email: input.email, phone: input.phone });
+      setCurrentUser({ name: input.name, email: input.email, phone: input.phone, role: "client" });
       setActiveRole("client");
       setView("client");
     },
@@ -255,7 +301,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(generatedProject.id);
   }, []);
 
-  const sendQuote = useCallback((projectId: string, amount: number, comment: string) => {
+  const sendQuote = useCallback((projectId: string, amount: number, comment: string, advancePercent = 30) => {
+    const safeAdvancePercent = Math.min(100, Math.max(0, Number(advancePercent) || 30));
+    const advanceAmount = Math.round((amount * safeAdvancePercent) / 100);
+
     setProjects((current) =>
       current.map((project) => {
         if (project.id !== projectId) {
@@ -268,6 +317,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             amount,
             comment,
             sentAt: new Date().toISOString(),
+            advancePercent: safeAdvancePercent,
+          },
+          payment: {
+            advancePercent: safeAdvancePercent,
+            amount: advanceAmount,
+            status: "PENDING",
           },
           clientResponse: undefined,
           negotiation: undefined,
@@ -316,7 +371,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const sendNegotiation = useCallback((projectId: string, amount: number, comment: string) => {
+  const sendNegotiation = useCallback((projectId: string, amount: number, comment: string, advancePercent = 30) => {
+    const safeAdvancePercent = Math.min(100, Math.max(0, Number(advancePercent) || 30));
+    const advanceAmount = Math.round((amount * safeAdvancePercent) / 100);
+
     setProjects((current) =>
       current.map((project) => {
         if (project.id !== projectId) {
@@ -329,6 +387,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             amount,
             comment,
             sentAt: new Date().toISOString(),
+            advancePercent: safeAdvancePercent,
+          },
+          payment: {
+            advancePercent: safeAdvancePercent,
+            amount: advanceAmount,
+            status: project.payment?.status === "PAID" ? "PAID" : "PENDING",
           },
           negotiationResponse: undefined,
         };
@@ -348,6 +412,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           negotiationResponse: {
             type: "ACCEPTED",
             respondedAt: new Date().toISOString(),
+          },
+        };
+      }),
+    );
+  }, []);
+
+  const payAdvance = useCallback((projectId: string) => {
+    setProjects((current) =>
+      current.map((project) => {
+        if (project.id !== projectId) {
+          return project;
+        }
+
+        const activeQuote = project.negotiation ?? project.initialQuote;
+        const advancePercent = activeQuote?.advancePercent ?? project.payment?.advancePercent ?? 30;
+        const advanceAmount = Math.round(((activeQuote?.amount ?? project.payment?.amount ?? 0) * advancePercent) / 100);
+
+        return {
+          ...project,
+          payment: {
+            advancePercent,
+            amount: advanceAmount,
+            status: "PAID",
+            paidAt: new Date().toISOString(),
           },
         };
       }),
@@ -396,6 +484,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       view,
       setView,
       isLoggedIn,
+      isReady,
       activeRole,
       currentUser,
       loginAdmin,
@@ -414,9 +503,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       sendNegotiation,
       acceptNegotiation,
       rejectNegotiation,
+      payAdvance,
       assignTeam,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, assignTeam, createProjectRequest, currentUser, isLoggedIn, loginAdmin, loginClient, loginTeam, logout, projects, rejectNegotiation, rejectQuote, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, view],
+    [acceptNegotiation, acceptQuote, activeRole, assignTeam, createProjectRequest, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

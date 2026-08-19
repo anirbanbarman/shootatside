@@ -5,9 +5,13 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { ClientLoginPage } from "@/components/auth/ClientLoginPage";
 
 export default function ClientPage() {
-  const { currentUser } = useProjectContext();
+  const { currentUser, isReady } = useProjectContext();
 
-  if (!currentUser) {
+  if (!isReady) {
+    return null;
+  }
+
+  if (!currentUser || currentUser.role !== "client") {
     return <ClientLoginPage />;
   }
 

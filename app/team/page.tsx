@@ -5,9 +5,13 @@ import { TeamDashboard } from "@/components/team/TeamDashboard";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
 export default function TeamPage() {
-  const { currentUser } = useProjectContext();
+  const { currentUser, isReady } = useProjectContext();
 
-  if (!currentUser) {
+  if (!isReady) {
+    return null;
+  }
+
+  if (!currentUser || currentUser.role !== "team") {
     return <TeamLoginPage />;
   }
 
