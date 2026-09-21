@@ -1193,6 +1193,44 @@ button {
   gap: 16px;
 }
 
+.team-registration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.team-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.team-form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.form-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.role-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.secondary-button {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--primary);
+  font-weight: 700;
+}
+
 .form-intro {
   margin: 0;
   color: var(--muted);
@@ -1289,6 +1327,523 @@ button {
 .app-shell-main {
   max-width: 1320px;
   margin: 0 auto;
+}
+
+.admin-portal-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.admin-sidebar {
+  width: 220px;
+  flex: 0 0 220px;
+  padding: 18px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-sidebar-title {
+  padding: 6px 12px 14px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-nav-button {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 600;
+}
+
+.admin-nav-button:hover,
+.admin-nav-button.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.admin-sidebar-submenu {
+  display: grid;
+  gap: 6px;
+  margin: 4px 12px 10px 24px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.team-submenu {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.team-submenu .admin-nav-button {
+  width: auto;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-portal-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-request-list {
+  display: grid;
+  gap: 12px;
+}
+
+.team-request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.team-request p {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.team-request-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-registration-list {
+  display: grid;
+  gap: 14px;
+}
+
+.team-registration-item {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(248, 248, 246, 0.72);
+}
+
+.team-registration-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.team-registration-heading h3 {
+  margin-top: 4px;
+}
+
+.team-registration-heading p:not(.eyebrow) {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.team-registration-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.team-registration-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.team-registration-actions input {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.team-registration-actions button {
+  min-height: 44px;
+}
+
+.team-member-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.team-member-form input,
+.team-member-form select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.team-member-list {
+  display: grid;
+  gap: 10px;
+}
+
+.team-member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(248, 248, 246, 0.72);
+}
+
+.team-member-item div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-member-item span {
+  color: var(--muted);
+}
+
+.event-hierarchy-list {
+  display: grid;
+  gap: 14px;
+}
+
+.hierarchy-event {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(248, 248, 246, 0.72);
+}
+
+.hierarchy-event-header,
+.hierarchy-interests,
+.hierarchy-builder-actions,
+.hierarchy-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hierarchy-member-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(130px, 1fr) minmax(180px, 1.2fr) minmax(150px, 1fr) auto;
+}
+
+.hierarchy-member-row input,
+.hierarchy-member-row select {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.hierarchy-member-row:has(input[aria-label^="Team member name"][value=""]) select:first-of-type {
+  display: none;
+}
+
+.team-visual-graph {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.team-graph-events {
+  display: grid;
+  gap: 18px;
+}
+
+.team-graph-event {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) 42px minmax(0, 2fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.team-graph-event-node,
+.team-graph-member-node {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(199, 161, 106, 0.45);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.team-graph-event-node span,
+.team-graph-member-node span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.team-graph-connector {
+  height: 2px;
+  background: var(--accent);
+}
+
+.team-graph-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hierarchy-event-header {
+  justify-content: space-between;
+}
+
+.hierarchy-event-header p:not(.eyebrow) {
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+.hierarchy-interests > span:not(.pill) {
+  color: var(--muted);
+}
+
+.hierarchy-builder {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.hierarchy-member-row select,
+.hierarchy-builder-actions input,
+.hierarchy-builder-actions textarea {
+  min-height: 44px;
+  flex: 1 1 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.hierarchy-add-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hierarchy-add-button {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 0.84rem;
+}
+
+.team-hierarchy-graph {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.hierarchy-graph-list {
+  display: grid;
+  gap: 18px;
+}
+
+.hierarchy-graph-event {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(248, 248, 246, 0.72);
+}
+
+.hierarchy-graph-root,
+.hierarchy-graph-person {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+}
+
+.hierarchy-graph-root {
+  background: var(--primary);
+  color: #fff;
+}
+
+.hierarchy-graph-root span,
+.hierarchy-graph-person span,
+.hierarchy-graph-person small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hierarchy-graph-root span {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.hierarchy-graph-person.leader {
+  border-color: rgba(199, 161, 106, 0.7);
+  background: var(--accent-soft);
+}
+
+.hierarchy-graph-leaders,
+.hierarchy-graph-crew {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+.hierarchy-graph-line {
+  width: 2px;
+  height: 20px;
+  background: var(--accent);
+}
+
+.hierarchy-field-labels {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.6fr) minmax(150px, 1fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(90px, 0.6fr);
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.hierarchy-builder-actions textarea {
+  min-height: 44px;
+  resize: vertical;
+}
+
+@media (max-width: 720px) {
+  .team-form-grid,
+  .role-checkbox-grid,
+  .team-member-form,
+  .team-registration-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .team-form-grid .full {
+    grid-column: auto;
+  }
+
+  .team-member-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hierarchy-member-row,
+  .team-graph-event {
+    grid-template-columns: 1fr;
+  }
+
+  .team-graph-connector {
+    width: 2px;
+    height: 18px;
+    margin: 0 auto;
+  }
+}
+
+.team-event-full-details,
+.team-event-action {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.team-event-full-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.team-event-full-details span,
+.team-event-action p {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.team-event-requirements,
+.team-event-assignment {
+  line-height: 1.55;
+}
+
+.team-event-list {
+  display: grid;
+  gap: 14px;
+}
+
+.team-event {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.team-event-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.team-event-header h3 {
+  margin-top: 4px;
+}
+
+.team-event-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.team-event-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.team-event-details span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.team-event-details strong {
+  overflow-wrap: anywhere;
 }
 
 .dashboard-shell {
@@ -1800,6 +2355,20 @@ button.full-width {
     flex-direction: column;
   }
 
+  .admin-portal-layout {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .admin-nav-button {
+    width: auto;
+    margin-right: 6px;
+  }
+
   .sidebar {
     width: 100%;
     border-right: none;
@@ -1812,5 +2381,9 @@ button.full-width {
 
   .portal-actions {
     grid-template-columns: 1fr;
+  }
+
+  .team-event-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

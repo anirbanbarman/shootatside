@@ -55,6 +55,71 @@ export interface TeamAssignment {
   assignedAt: string;
 }
 
+export interface EventTeamMember {
+  member: string;
+  memberEmail: string;
+  memberPhone?: string;
+  role: TeamMemberRole;
+  date: string;
+  camera: string;
+  gear: string;
+  notes: string;
+  assignedAt: string;
+}
+
+export interface TeamInterest {
+  member: string;
+  memberEmail: string;
+  requestedAt: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+}
+
+export type TeamRegistrationStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+
+export interface TeamRegistration {
+  id: string;
+  name: string;
+  mobile: string;
+  whatsapp: string;
+  email: string;
+  address: string;
+  aadharFileName: string;
+  selfieFileName: string;
+  phonePe: string;
+  preferredRoles: TeamMemberRole[];
+  username?: string;
+  password?: string;
+  status: TeamRegistrationStatus;
+  submittedAt: string;
+}
+
+export const TEAM_MEMBER_ROLES = [
+  "Team Leader",
+  "Candid Photographer",
+  "Group Photo taker",
+  "Traditional photo taker",
+  "Couple Photo taker",
+  "Cinematographer",
+  "Reel Maker",
+  "Teaser Maker",
+  "Halping Hand",
+  "Drone operator",
+  "Live Video",
+  "Sound Operator",
+  "Driver",
+] as const;
+
+export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number];
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: TeamMemberRole;
+  email: string;
+  phone: string;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   client: Client;
@@ -69,6 +134,8 @@ export interface Project {
   negotiationResponse?: ClientResponse;
   payment?: AdvancePayment;
   teamAssignment?: TeamAssignment;
+  eventTeam?: EventTeamMember[];
+  teamInterest?: TeamInterest[];
 }
 
 export interface NotificationState {

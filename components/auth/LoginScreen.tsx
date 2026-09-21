@@ -12,8 +12,8 @@ export function LoginScreen() {
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [teamName, setTeamName] = useState("");
-  const [teamCode, setTeamCode] = useState("");
+  const [teamUsername, setTeamUsername] = useState("");
+  const [teamPassword, setTeamPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleAdminLogin = () => {
@@ -43,17 +43,15 @@ export function LoginScreen() {
   };
 
   const handleTeamLogin = () => {
-    if (!teamName.trim() || !teamCode.trim()) {
-      setError("Please enter your team name and access code.");
+    if (!teamUsername.trim() || !teamPassword.trim()) {
+      setError("Please enter your team username and password.");
       return;
     }
 
-    loginTeam({
-      name: teamName.trim(),
-      email: `${teamName.trim().toLowerCase().replace(/\s+/g, ".")}@team.ani`,
-      phone: "team-access",
-      code: teamCode.trim(),
-    });
+    if (!loginTeam(teamUsername, teamPassword)) {
+      setError("Your account is pending approval or the credentials are incorrect.");
+      return;
+    }
   };
 
   return (
@@ -118,11 +116,11 @@ export function LoginScreen() {
             <div className="login-title">Team Login</div>
             <p className="login-subtitle">Use the team code shared by the admin when it is ready.</p>
             <div className="login-form">
-              <label htmlFor="team-name">Team Member Name</label>
-              <input id="team-name" value={teamName} onChange={(e) => setTeamName(e.target.value)} />
+              <label htmlFor="team-username">Username</label>
+              <input id="team-username" value={teamUsername} onChange={(e) => setTeamUsername(e.target.value)} />
 
-              <label htmlFor="team-code">Access Code</label>
-              <input id="team-code" value={teamCode} onChange={(e) => setTeamCode(e.target.value)} />
+              <label htmlFor="team-password">Password</label>
+              <input id="team-password" type="password" value={teamPassword} onChange={(e) => setTeamPassword(e.target.value)} />
 
               <button type="button" className="primary-button full-width" onClick={handleTeamLogin}>
                 Login to Team Portal

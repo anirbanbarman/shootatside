@@ -5,26 +5,27 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { TeamRegistrationForm } from "@/components/auth/TeamRegistrationForm";
 
 export function TeamLoginPage() {
   const router = useRouter();
   const { loginTeam } = useProjectContext();
-  const [name, setName] = useState("Aman Roy");
-  const [code, setCode] = useState("TEAM-2026");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showRegistration, setShowRegistration] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = () => {
-    if (!name.trim() || !code.trim()) {
-      setError("Please enter your team member name and access code.");
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter your username and password.");
       return;
     }
 
-    loginTeam({
-      name: name.trim(),
-      email: `${name.trim().toLowerCase().replace(/\s+/g, ".")}@team.ani`,
-      phone: "team-access",
-      code: code.trim(),
-    });
+    if (!loginTeam(username, password)) {
+      setError("Your account is pending approval or the credentials are incorrect.");
+      return;
+    }
+
     router.replace("/team");
   };
 
@@ -42,27 +43,32 @@ export function TeamLoginPage() {
         </div>
 
         <div className="role-login-form">
-          <p className="form-intro">Access the team portal with your credentials shared by the admin.</p>
+          {showRegistration ? <>
+            <p className="form-intro">Register below. Admin approval is required before event access is enabled.</p>
+            <TeamRegistrationForm onComplete={() => setShowRegistration(false)} />
+            <button type="button" className="secondary-button full-width" onClick={() => setShowRegistration(false)}>Back to Login</button>
+          </> : <>
+          <p className="form-intro">Use the username and password given to you after admin approval.</p>
 
           <div className="form-group">
-            <label htmlFor="team-name">Team Member Name</label>
+            <label htmlFor="team-username">Username</label>
             <input
-              id="team-name"
+              id="team-username"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your Full Name"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Your username"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="team-code">Access Code</label>
+            <label htmlFor="team-password">Password</label>
             <input
-              id="team-code"
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Enter your access code"
+              id="team-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
             />
           </div>
 
@@ -72,11 +78,8 @@ export function TeamLoginPage() {
             Login to Team Portal
           </button>
 
-          <div className="demo-note">
-            <strong>Demo Access</strong>
-            <p>Name: Aman Roy</p>
-            <p>Code: TEAM-2026</p>
-          </div>
+          <button type="button" className="secondary-button full-width" onClick={() => setShowRegistration(true)}>Register as Team Member</button>
+          </>}
         </div>
       </div>
     </div>

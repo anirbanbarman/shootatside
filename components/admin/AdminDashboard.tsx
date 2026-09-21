@@ -7,7 +7,180 @@ import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { TEAM_MEMBER_ROLES, type TeamMemberRole } from "@/types/project";
 import { formatCurrency, formatDate } from "@/utils/status";
+
+function TeamHierarchyBuilder() {
+  const { projects, teamRegistrations, assignEventTeam } = useProjectContext();
+  const [date, setDate] = useState("");
+  const [openEvent, setOpenEvent] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, { kind: "interested" | "custom"; memberEmail: string; name: string; phone: string; role: TeamMemberRole }[]>>({});
+
+  return <div className="panel">
+    <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Add interested members or create custom team members for each event.</p></div><label><span>Filter by event date</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label></div>
+    <div className="event-hierarchy-list">{projects.filter((project) => !date || project.eventDate === date).map((project) => {
+      const interested = (project.teamInterest ?? []).map((interest) => ({ interest, registration: teamRegistrations.find((registration) => registration.email === interest.memberEmail) })).filter((item) => item.registration);
+      const rows = drafts[project.id] ?? project.eventTeam?.map((member) => ({ kind: "custom" as const, memberEmail: member.memberEmail, name: member.member, phone: member.memberPhone ?? "", role: member.role })) ?? [];
+      const updateRows = (nextRows: typeof rows) => setDrafts((current) => ({ ...current, [project.id]: nextRows }));
+      const addInterested = () => {
+        const option = interested.find((item) => !rows.some((row) => row.memberEmail === item.interest.memberEmail));
+        if (!option) return;
+        updateRows([...rows, { kind: "interested", memberEmail: option.interest.memberEmail, name: option.interest.member, phone: option.registration?.mobile ?? "", role: option.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] }]);
+      };
+      const addCustom = () => updateRows([...rows, { kind: "custom", memberEmail: `manual-${Date.now()}`, name: "", phone: "", role: TEAM_MEMBER_ROLES[0] }]);
+      return <article className="hierarchy-event" key={project.id}>
+        <div className="hierarchy-event-header"><div><p className="eyebrow">{project.id}</p><h3>{project.client.name} · {project.eventType}</h3><p>{formatDate(project.eventDate)} · {project.venue}</p></div><button type="button" className="primary-button" onClick={() => setOpenEvent((current) => current === project.id ? null : project.id)}>Make My Team</button></div>
+        <div className="hierarchy-interests"><strong>Interested members</strong>{interested.length === 0 ? <span>No team member interest yet.</span> : interested.map(({ interest }) => <span className="pill" key={interest.memberEmail}>{interest.member} · {interest.status}</span>)}</div>
+        {openEvent === project.id ? <div className="hierarchy-builder">
+          {rows.length > 0 ? <div className="hierarchy-field-labels"><span>Type</span><span>Name</span><span>Phone Number</span><span>Role</span><span>Action</span></div> : null}
+          {rows.map((row, index) => {
+            const selected = interested.find((item) => item.interest.memberEmail === row.memberEmail);
+            const roles = row.kind === "interested" ? selected?.registration?.preferredRoles ?? [] : TEAM_MEMBER_ROLES;
+            return <div className="hierarchy-member-row" key={`${row.memberEmail}-${index}`}>
+              <strong className="hierarchy-row-kind">{row.kind === "interested" ? "Interested" : "Custom"}</strong>
+              {row.kind === "interested" ? <><select aria-label={`Interested member ${index + 1}`} value={row.memberEmail} onChange={(event) => { const next = interested.find((item) => item.interest.memberEmail === event.target.value); updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, memberEmail: event.target.value, name: next?.interest.member ?? "", phone: next?.registration?.mobile ?? "", role: next?.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] } : item)); }}>{interested.map(({ interest }) => <option key={interest.memberEmail} value={interest.memberEmail}>{interest.member}</option>)}</select><input aria-label={`Interested member name ${index + 1}`} value={row.name} disabled /><input aria-label={`Interested member phone ${index + 1}`} value={row.phone} disabled /></> : <><input aria-label={`Custom member name ${index + 1}`} placeholder="Name" value={row.name} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /><input aria-label={`Custom member phone ${index + 1}`} placeholder="Phone number" value={row.phone} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, phone: event.target.value } : item))} /></>}
+              <select aria-label={`Role ${index + 1}`} value={row.role} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, role: event.target.value as TeamMemberRole } : item))}>{roles.map((role) => <option key={role} value={role}>{role}</option>)}</select><button type="button" className="danger-button" onClick={() => updateRows(rows.filter((_, rowIndex) => rowIndex !== index))}>Remove</button>
+            </div>;
+          })}
+          <div className="hierarchy-builder-actions"><div className="hierarchy-add-actions"><button type="button" className="secondary-button hierarchy-add-button" onClick={addInterested}>Add Interested Member</button><button type="button" className="secondary-button hierarchy-add-button" onClick={addCustom}>Add Team Member</button></div><button type="button" className="success-button" onClick={() => assignEventTeam(project.id, rows.map((row) => ({ memberEmail: row.memberEmail, member: row.name, memberPhone: row.phone, role: row.role, date: project.eventDate, camera: "", gear: "", notes: "" })))}>Save Team</button></div>
+        </div> : null}
+        {project.eventTeam?.length ? <div className="team-hierarchy-graph"><div className="panel-header"><h3>Team Hierarchy Graph</h3><span className="pill">Leader to members</span></div>{(() => { const members = project.eventTeam ?? []; const leaders = members.filter((member) => member.role === "Team Leader"); const crew = members.filter((member) => member.role !== "Team Leader"); return <div className="hierarchy-graph-event"><div className="hierarchy-graph-root"><strong>{project.eventType}</strong><span>{formatDate(project.eventDate)} · {project.client.name}</span></div><div className="hierarchy-graph-line" />{leaders.length > 0 ? <div className="hierarchy-graph-leaders">{leaders.map((leader) => <div className="hierarchy-graph-person leader" key={`${project.id}-${leader.memberEmail}-${leader.role}`}><strong>{leader.member}</strong><span>{leader.memberPhone || "Phone not provided"}</span><small>{leader.role}</small></div>)}</div> : <div className="empty-state small">No Team Leader assigned.</div>}<div className="hierarchy-graph-line" />{crew.length > 0 ? <div className="hierarchy-graph-crew">{crew.map((member) => <div className="hierarchy-graph-person" key={`${project.id}-${member.memberEmail}-${member.role}`}><strong>{member.member}</strong><span>{member.memberPhone || "Phone not provided"}</span><small>{member.role}</small></div>)}</div> : null}</div>; })()}</div> : null}
+      </article>;
+    })}</div>
+  </div>;
+}
+
+function TeamManagementPanel() {
+  const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
+  const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [activeSubsection, setActiveSubsection] = useState<"registrations" | "interests" | "hierarchy" | "hierarchy-builder">("registrations");
+  const [interestDate, setInterestDate] = useState("");
+  const [hierarchyDate, setHierarchyDate] = useState("");
+  const [openTeamEventId, setOpenTeamEventId] = useState<string | null>(null);
+  const [teamDrafts, setTeamDrafts] = useState<Record<string, { memberEmail: string; member: string; memberPhone: string; role: TeamMemberRole }[]>>({});
+  const requests = projects.flatMap((project) => (project.teamInterest ?? [])
+    .filter(() => !interestDate || project.eventDate === interestDate)
+    .map((interest) => ({ project, interest })));
+
+  return (
+    <div className="dashboard-shell">
+      <section className="page-intro">
+        <div>
+          <p className="eyebrow">Admin Portal</p>
+          <h2>Team Management</h2>
+        </div>
+        <span className="pill">{requests.length} interest requests</span>
+      </section>
+
+      <div className="team-submenu" aria-label="Team management sections">
+        <button type="button" className={activeSubsection === "registrations" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("registrations")}>Team Registration</button>
+        <button type="button" className={activeSubsection === "interests" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("interests")}>Interest Requests</button>
+        <button type="button" className={activeSubsection === "hierarchy-builder" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("hierarchy-builder")}>Team Hierarchy</button>
+      </div>
+
+      {activeSubsection === "registrations" ? <div className="panel">
+        <div className="panel-header">
+          <h3>Team Registrations</h3>
+          <span className="pill">{teamRegistrations.length} applications</span>
+        </div>
+        {teamRegistrations.length === 0 ? (
+          <div className="empty-state">No team registration applications yet.</div>
+        ) : (
+          <div className="team-registration-list">
+            {teamRegistrations.map((registration) => {
+              const formValues = credentials[registration.id] ?? { username: "", password: "" };
+              return (
+                <article className="team-registration-item" key={registration.id}>
+                  <div className="team-registration-heading">
+                    <div><p className="eyebrow">{registration.id}</p><h3>{registration.name}</h3><p>{registration.email} · {registration.mobile}</p></div>
+                    <span className="pill">{registration.status}</span>
+                  </div>
+                  <div className="team-registration-details">
+                    <span>WhatsApp: {registration.whatsapp}</span><span>PhonePe: {registration.phonePe}</span><span>Address: {registration.address}</span>
+                    <span>Aadhar: {registration.aadharFileName}</span><span>Selfie: {registration.selfieFileName}</span>
+                    <span>Preferred roles: {registration.preferredRoles?.join(", ") || "Not selected"}</span>
+                  </div>
+                  {registration.status === "PENDING" ? <div className="team-registration-actions">
+                    <input aria-label={`Username for ${registration.name}`} placeholder="Set username" value={formValues.username} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, username: event.target.value } }))} />
+                    <input aria-label={`Password for ${registration.name}`} type="password" placeholder="Set password" value={formValues.password} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: event.target.value } }))} />
+                    <button type="button" className="success-button" onClick={() => {
+                      if (formValues.username.trim() && formValues.password.trim()) approveTeamRegistration(registration.id, formValues.username.trim(), formValues.password);
+                    }}>Accept &amp; Set Login</button>
+                    <button type="button" className="danger-button" onClick={() => rejectTeamRegistration(registration.id)}>Reject</button>
+                  </div> : null}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div> : null}
+
+      {activeSubsection === "interests" ? <div className="panel">
+        <div className="panel-header">
+          <h3>Team Interest Requests</h3>
+          <input aria-label="Filter interest requests by event date" type="date" value={interestDate} onChange={(event) => setInterestDate(event.target.value)} />
+        </div>
+        {requests.length === 0 ? (
+          <div className="empty-state">No team members have requested event access.</div>
+        ) : (
+          <div className="team-request-list">
+            {requests.map(({ project, interest }) => {
+              return (
+                <article className="team-request" key={`${project.id}-${interest.memberEmail}`}>
+                  <div>
+                    <p className="eyebrow">{project.id}</p>
+                    <h3>{interest.member}</h3>
+                    <p>{project.eventType} · {formatDate(project.eventDate)} · {project.venue}</p>
+                  </div>
+                  <div className="team-request-actions">
+                    <span className="pill">{interest.status}</span>
+                    {interest.status === "PENDING" ? (
+                      <>
+                        <button type="button" className="success-button" onClick={() => approveTeamInterest(project.id, interest.memberEmail)}>Accept Request</button>
+                        <button type="button" className="danger-button" onClick={() => rejectTeamInterest(project.id, interest.memberEmail)}>Reject</button>
+                      </>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div> : null}
+
+      {activeSubsection === "hierarchy-builder" ? <TeamHierarchyBuilder /> : null}
+
+      {activeSubsection === "hierarchy" ? <div className="panel">
+        <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Build a separate team for each event from members who showed interest.</p></div><input aria-label="Filter hierarchy events by date" type="date" value={hierarchyDate} onChange={(event) => setHierarchyDate(event.target.value)} /></div>
+        <div className="event-hierarchy-list">
+          {projects.filter((project) => !hierarchyDate || project.eventDate === hierarchyDate).map((project) => {
+            const interestedMembers = (project.teamInterest ?? []).map((interest) => ({ interest, registration: teamRegistrations.find((registration) => registration.email === interest.memberEmail) })).filter((item) => item.registration);
+            const draft = teamDrafts[project.id] ?? project.eventTeam?.map((member) => ({ memberEmail: member.memberEmail, member: member.member, memberPhone: member.memberPhone ?? "", role: member.role })) ?? [];
+            const addMember = () => {
+              const available = interestedMembers.find((item) => !draft.some((member) => member.memberEmail === item.interest.memberEmail));
+              const preferredRole = available?.registration?.preferredRoles[0];
+              if (!available || !preferredRole) return;
+              setTeamDrafts((current) => ({ ...current, [project.id]: [...draft, { memberEmail: available.interest.memberEmail, member: available.interest.member, memberPhone: available.registration?.mobile ?? "", role: preferredRole }] }));
+            };
+            return <article className="hierarchy-event" key={project.id}>
+              <div className="hierarchy-event-header"><div><p className="eyebrow">{project.id}</p><h3>{project.client.name} · {project.eventType}</h3><p>{formatDate(project.eventDate)} · {project.venue}</p></div><button type="button" className="primary-button" onClick={() => setOpenTeamEventId((current) => current === project.id ? null : project.id)}>Make My Team</button></div>
+              <div className="hierarchy-interests"><strong>Interested members</strong>{interestedMembers.length === 0 ? <span>No team member interest yet.</span> : interestedMembers.map(({ interest }) => <span className="pill" key={interest.memberEmail}>{interest.member} · {interest.status}</span>)}</div>
+              {openTeamEventId === project.id ? <div className="hierarchy-builder">
+                <div className="hierarchy-field-labels"><span>Name</span><span>Phone Number</span><span>Interested Member</span><span>Role</span></div>
+                {draft.map((member, index) => { const interested = interestedMembers.find((item) => item.interest.memberEmail === member.memberEmail); const roles = interested?.registration?.preferredRoles ?? TEAM_MEMBER_ROLES; return <div className="hierarchy-member-row" key={`${member.memberEmail}-${index}`}><input aria-label={`Team member name ${index + 1}`} value={member.member} onChange={(event) => setTeamDrafts((current) => ({ ...current, [project.id]: draft.map((item, itemIndex) => itemIndex === index ? { ...item, member: event.target.value } : item) }))} /><input aria-label={`Team member phone ${index + 1}`} value={member.memberPhone} onChange={(event) => setTeamDrafts((current) => ({ ...current, [project.id]: draft.map((item, itemIndex) => itemIndex === index ? { ...item, memberPhone: event.target.value } : item) }))} /><select aria-label={`Team member ${index + 1}`} value={member.memberEmail} onChange={(event) => setTeamDrafts((current) => ({ ...current, [project.id]: draft.map((item, itemIndex) => itemIndex === index ? { ...item, memberEmail: event.target.value, member: interestedMembers.find((candidate) => candidate.interest.memberEmail === event.target.value)?.interest.member ?? item.member, memberPhone: interestedMembers.find((candidate) => candidate.interest.memberEmail === event.target.value)?.registration?.mobile ?? item.memberPhone, role: interestedMembers.find((candidate) => candidate.interest.memberEmail === event.target.value)?.registration?.preferredRoles[0] ?? item.role } : item) }))}>{interestedMembers.map(({ interest }) => <option key={interest.memberEmail} value={interest.memberEmail}>{interest.member}</option>)}</select><select aria-label={`Role for team member ${index + 1}`} value={member.role} onChange={(event) => setTeamDrafts((current) => ({ ...current, [project.id]: draft.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value as TeamMemberRole } : item) }))}>{roles.map((role) => <option key={role} value={role}>{role}</option>)}</select><button type="button" className="danger-button" onClick={() => setTeamDrafts((current) => ({ ...current, [project.id]: draft.filter((_, itemIndex) => itemIndex !== index) }))}>Remove</button></div>; })}
+                <div className="hierarchy-builder-actions"><button type="button" className="secondary-button" onClick={addMember}>Add Interested Member</button><button type="button" className="secondary-button" onClick={() => setTeamDrafts((current) => ({ ...current, [project.id]: [...draft, { memberEmail: `manual-${Date.now()}`, member: "", memberPhone: "", role: TEAM_MEMBER_ROLES[0] }] }))}>Add Team Member</button><button type="button" className="success-button" onClick={() => assignEventTeam(project.id, draft.map((member) => ({ ...member, date: project.eventDate, camera: "", gear: "", notes: "" })))}>Save Team</button></div>
+              </div> : null}
+            </article>;
+          })}
+        </div>
+        <div className="team-visual-graph">
+          <div className="panel-header"><h3>Whole Team Graph</h3><span className="pill">Event assignments</span></div>
+          {projects.filter((project) => project.eventTeam?.length).length === 0 ? <div className="empty-state">Save an event team to see the visual graph.</div> : <div className="team-graph-events">{projects.filter((project) => project.eventTeam?.length).map((project) => <div className="team-graph-event" key={project.id}><div className="team-graph-event-node"><strong>{project.eventType}</strong><span>{formatDate(project.eventDate)}</span></div><div className="team-graph-connector" /><div className="team-graph-members">{project.eventTeam?.map((member) => <div className="team-graph-member-node" key={`${project.id}-${member.memberEmail}-${member.role}`}><strong>{member.member}</strong><span>{member.role}</span></div>)}</div></div>)}</div>}
+        </div>
+      </div> : null}
+    </div>
+  );
+}
 
 export function AdminDashboard() {
   const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, assignTeam, resetDemoProjects, seedDemoProject } = useProjectContext();
@@ -31,6 +204,7 @@ export function AdminDashboard() {
   });
   const [assignmentError, setAssignmentError] = useState("");
   const [assignmentSuccess, setAssignmentSuccess] = useState("");
+  const [activeSection, setActiveSection] = useState<"dashboard" | "team-management">("dashboard");
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? projects[0],
@@ -121,7 +295,20 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="dashboard-shell">
+    <div className="admin-portal-layout">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-title">Admin Portal</div>
+        <button type="button" className={activeSection === "dashboard" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSection("dashboard")}>
+          Dashboard
+        </button>
+        <button type="button" className={activeSection === "team-management" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSection("team-management")}>
+          Team Management
+        </button>
+        {activeSection === "team-management" ? <div className="admin-sidebar-submenu"><span>Team Registration</span><span>Interest Requests</span><span>Team Hierarchy</span></div> : null}
+      </aside>
+
+      <main className="admin-portal-main">
+      {activeSection === "team-management" ? <TeamManagementPanel /> : <div className="dashboard-shell">
       <section className="page-intro">
         <div>
           <p className="eyebrow">Photography Admin</p>
@@ -324,6 +511,8 @@ export function AdminDashboard() {
 
       </div>
 
+      </div>}
+      </main>
       <Modal title="Project Timeline" open={isTimelineOpen} onClose={() => setTimelineOpen(false)}>
         <ProjectTimeline project={selectedProject} />
       </Modal>

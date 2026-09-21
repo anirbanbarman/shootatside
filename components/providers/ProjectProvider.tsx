@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { mockProjects } from "@/data/mockProjects";
-import type { Project, ViewMode } from "@/types/project";
+import type { EventTeamMember, Project, TeamInterest, TeamMember, TeamMemberRole, TeamRegistration, ViewMode } from "@/types/project";
 
 type UserRole = "admin" | "client" | "team";
 
@@ -33,7 +33,13 @@ interface ProjectContextValue {
   currentUser: SessionUser | null;
   loginAdmin: (user: SessionUser) => void;
   loginClient: (user: SessionUser) => void;
-  loginTeam: (user: SessionUser & { code: string }) => void;
+  loginTeam: (username: string, password: string) => boolean;
+  registerTeam: (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => void;
+  teamRegistrations: TeamRegistration[];
+  approveTeamRegistration: (registrationId: string, username: string, password: string) => void;
+  rejectTeamRegistration: (registrationId: string) => void;
+  teamMembers: TeamMember[];
+  createTeamMember: (input: { name: string; role: TeamMemberRole; email: string; phone: string }) => void;
   logout: () => void;
   projects: Project[];
   selectedProjectId: string;
@@ -57,7 +63,11 @@ interface ProjectContextValue {
   acceptNegotiation: (projectId: string) => void;
   rejectNegotiation: (projectId: string, comment: string) => void;
   payAdvance: (projectId: string) => void;
+  requestTeamInterest: (projectId: string) => string | null;
+  approveTeamInterest: (projectId: string, memberEmail: string) => void;
+  rejectTeamInterest: (projectId: string, memberEmail: string) => void;
   assignTeam: (projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => void;
+  assignEventTeam: (projectId: string, assignments: Omit<EventTeamMember, "assignedAt">[]) => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
@@ -67,6 +77,8 @@ const STORAGE_KEYS = {
   selectedProjectId: "shootatside-selected-project-id",
   user: "shootatside-current-user",
   roleState: "shootatside-role-state",
+  teamRegistrations: "shootatside-team-registrations",
+  teamMembers: "shootatside-team-members",
 } as const;
 
 const DEFAULT_ROLE_STATE = {
@@ -106,6 +118,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0]?.id ?? "");
+  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   const syncFromStorage = useCallback(() => {
@@ -123,14 +137,28 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           role: storedUser.role ?? (storedRoleState.activeRole === "admin" ? "admin" : storedRoleState.activeRole === "client" ? "client" : "team"),
         }
       : null;
-    const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects);
+    const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => ({
+      ...project,
+      teamInterest: project.teamInterest
+        ? Array.isArray(project.teamInterest)
+          ? project.teamInterest
+          : [project.teamInterest as unknown as TeamInterest]
+        : undefined,
+    }));
     const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
+    const storedTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
+      ...registration,
+      preferredRoles: registration.preferredRoles ?? [],
+    }));
+    const storedTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
 
     setView(storedRoleState.view ?? "admin");
     setActiveRole(storedRoleState.activeRole ?? "admin");
     setCurrentUser(normalizedUser);
     setProjects(storedProjects.length > 0 ? storedProjects : mockProjects);
     setSelectedProjectId(storedSelectedProject ?? mockProjects[0]?.id ?? "");
+    setTeamRegistrations(storedTeamRegistrations);
+    setTeamMembers(storedTeamMembers);
     setIsReady(true);
   }, []);
 
@@ -144,7 +172,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.user || event.key === STORAGE_KEYS.roleState || event.key === STORAGE_KEYS.selectedProjectId || !event.key) {
+      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.user || event.key === STORAGE_KEYS.roleState || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || !event.key) {
         syncFromStorage();
       }
     };
@@ -159,6 +187,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     writeStoredValue(STORAGE_KEYS.projects, projects);
+    writeStoredValue(STORAGE_KEYS.teamRegistrations, teamRegistrations);
+    writeStoredValue(STORAGE_KEYS.teamMembers, teamMembers);
     if (selectedProjectId) {
       writeStoredValue(STORAGE_KEYS.selectedProjectId, selectedProjectId);
     } else {
@@ -172,7 +202,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     writeStoredValue(STORAGE_KEYS.roleState, { view, activeRole });
-  }, [activeRole, currentUser, isReady, projects, selectedProjectId, view]);
+  }, [activeRole, currentUser, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
 
   const isLoggedIn = Boolean(currentUser);
 
@@ -188,10 +218,44 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setView("client");
   }, []);
 
-  const loginTeam = useCallback((user: SessionUser & { code: string }) => {
-    setCurrentUser({ name: user.name, email: user.email, phone: user.phone, role: "team" });
+  const loginTeam = useCallback((username: string, password: string) => {
+    const registration = teamRegistrations.find((item) => item.status === "ACCEPTED" && item.username === username.trim() && item.password === password);
+    if (!registration) {
+      return false;
+    }
+
+    setCurrentUser({ name: registration.name, email: registration.email, phone: registration.mobile, role: "team" });
     setActiveRole("team");
     setView("team");
+    return true;
+  }, [teamRegistrations]);
+
+  const registerTeam = useCallback((input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => {
+    setTeamRegistrations((current) => [
+      {
+        ...input,
+        id: `TEAM-${Date.now()}`,
+        status: "PENDING",
+        submittedAt: new Date().toISOString(),
+      },
+      ...current,
+    ]);
+  }, []);
+
+  const approveTeamRegistration = useCallback((registrationId: string, username: string, password: string) => {
+    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId
+      ? { ...registration, username, password, status: "ACCEPTED" }
+      : registration));
+  }, []);
+
+  const rejectTeamRegistration = useCallback((registrationId: string) => {
+    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId
+      ? { ...registration, status: "REJECTED" }
+      : registration));
+  }, []);
+
+  const createTeamMember = useCallback((input: { name: string; role: TeamMemberRole; email: string; phone: string }) => {
+    setTeamMembers((current) => [{ ...input, id: `MEMBER-${Date.now()}`, createdAt: new Date().toISOString() }, ...current]);
   }, []);
 
   const logout = useCallback(() => {
@@ -442,6 +506,65 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const requestTeamInterest = useCallback((projectId: string) => {
+    if (!currentUser || currentUser.role !== "team") {
+      return "Please log in as an approved team member.";
+    }
+
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) {
+      return "This event is no longer available.";
+    }
+
+    const hasSameDateRequest = projects.some((item) => item.id !== projectId
+      && item.eventDate === project.eventDate
+      && item.teamInterest?.some((interest) => interest.memberEmail === currentUser.email
+        && (interest.status === "PENDING" || interest.status === "ACCEPTED")));
+
+    if (hasSameDateRequest) {
+      return `You can assign only one event on ${project.eventDate}.`;
+    }
+
+    setProjects((current) => current.map((item) => {
+      if (item.id !== projectId) {
+        return item;
+      }
+
+      const interests = item.teamInterest ?? [];
+      const existingInterest = interests.find((interest) => interest.memberEmail === currentUser.email);
+      const nextInterest = {
+        member: currentUser.name,
+        memberEmail: currentUser.email,
+        requestedAt: new Date().toISOString(),
+        status: "PENDING" as const,
+      };
+
+      return {
+        ...item,
+        teamInterest: existingInterest
+          ? interests.map((interest) => interest.memberEmail === currentUser.email ? nextInterest : interest)
+          : [...interests, nextInterest],
+      };
+    }));
+    return null;
+  }, [currentUser, projects]);
+
+  const approveTeamInterest = useCallback((projectId: string, memberEmail: string) => {
+    setProjects((current) =>
+      current.map((project) => project.id === projectId && project.teamInterest
+        ? { ...project, teamInterest: project.teamInterest.map((interest) => interest.memberEmail === memberEmail && interest.status === "PENDING" ? { ...interest, status: "ACCEPTED" } : interest) }
+        : project),
+    );
+  }, []);
+
+  const rejectTeamInterest = useCallback((projectId: string, memberEmail: string) => {
+    setProjects((current) =>
+      current.map((project) => project.id === projectId && project.teamInterest
+        ? { ...project, teamInterest: project.teamInterest.map((interest) => interest.memberEmail === memberEmail && interest.status === "PENDING" ? { ...interest, status: "REJECTED" } : interest) }
+        : project),
+    );
+  }, []);
+
   const rejectNegotiation = useCallback((projectId: string, comment: string) => {
     setProjects((current) =>
       current.map((project) => {
@@ -479,6 +602,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const assignEventTeam = useCallback((projectId: string, assignments: Omit<EventTeamMember, "assignedAt">[]) => {
+    setProjects((current) => current.map((project) => project.id === projectId
+      ? { ...project, eventTeam: assignments.map((assignment) => ({ ...assignment, assignedAt: new Date().toISOString() })) }
+      : project));
+  }, []);
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       view,
@@ -490,6 +619,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       loginAdmin,
       loginClient,
       loginTeam,
+      registerTeam,
+      teamRegistrations,
+      approveTeamRegistration,
+      rejectTeamRegistration,
+      teamMembers,
+      createTeamMember,
       logout,
       projects,
       selectedProjectId,
@@ -504,9 +639,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       acceptNegotiation,
       rejectNegotiation,
       payAdvance,
+      requestTeamInterest,
+      approveTeamInterest,
+      rejectTeamInterest,
       assignTeam,
+      assignEventTeam,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, assignTeam, createProjectRequest, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, view],
+    [acceptNegotiation, acceptQuote, activeRole, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, teamMembers, teamRegistrations, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
