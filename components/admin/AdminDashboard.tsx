@@ -10,6 +10,17 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamUserType } from "@/types/project";
 import { formatCurrency, formatDate } from "@/utils/status";
 
+function LiveTrackerPanel() {
+  const { projects, addEventTrackerTask, toggleEventTrackerTask, sendEventTrackerMessage } = useProjectContext();
+  const [taskText, setTaskText] = useState<Record<string, string>>({});
+  const [chatText, setChatText] = useState<Record<string, string>>({});
+  const [showAllTrackers, setShowAllTrackers] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+    const visibleTrackers = projects.filter((project) => project.eventTeam?.length && (showAllTrackers || project.eventDate === today));
+
+  return <div className="panel"><div className="panel-header"><div><h3>Live Event Tracker</h3><p className="form-note">Showing {showAllTrackers ? "all event trackers" : "today's event trackers"}.</p></div><button type="button" className="secondary-button" onClick={() => setShowAllTrackers((current) => !current)}>{showAllTrackers ? "Show Today Only" : "Show All Trackers"}</button></div><div className="live-tracker-list">{visibleTrackers.map((project) => { const isToday = project.eventDate === today; const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }; const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader"); return <article className="live-tracker-card" key={project.id}><div className="panel-header"><div><p className="eyebrow">{project.id}</p><h3>{project.eventType} · {formatDate(project.eventDate)}</h3><p>{project.client.name} · {project.venue}</p></div><span className="pill">{isToday ? (tracker.leaderArrivedAt ? `Leader reached ${new Date(tracker.leaderArrivedAt).toLocaleTimeString()}` : "Leader not reached") : "Read only"}</span></div><div className="tracker-members"><strong>Member attendance</strong>{project.eventTeam?.map((member) => <span className="pill" key={member.memberEmail}>{member.member} · {tracker.memberJoinedAt[member.memberEmail] ? `Joined ${new Date(tracker.memberJoinedAt[member.memberEmail]).toLocaleTimeString()}` : "Not joined"}</span>)}</div><div className="tracker-tasks"><strong>Event checklist</strong>{tracker.tasks.map((task) => <label className="check-item" key={task.id}><input type="checkbox" disabled={!isToday} checked={task.completed} onChange={() => toggleEventTrackerTask(project.id, task.id)} />{task.label}{task.completedAt ? ` · ${new Date(task.completedAt).toLocaleTimeString()}` : ""}</label>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Add event task" value={taskText[project.id] ?? ""} onChange={(event) => setTaskText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (taskText[project.id]?.trim()) { addEventTrackerTask(project.id, taskText[project.id].trim()); setTaskText((current) => ({ ...current, [project.id]: "" })); } }}>Add Task</button></div></div>{tracker.delayNote ? <div className="warning-box"><strong>Delay / Issue:</strong> {tracker.delayNote}</div> : null}<div className="tracker-chat"><strong>Chat with {leader?.member ?? "Team Leader"}</strong>{tracker.messages.map((message) => <p key={message.id}><b>{message.sender}</b> · {message.message}</p>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Message team leader" value={chatText[project.id] ?? ""} onChange={(event) => setChatText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (chatText[project.id]?.trim()) { sendEventTrackerMessage(project.id, chatText[project.id].trim(), "admin"); setChatText((current) => ({ ...current, [project.id]: "" })); } }}>Send</button></div></div></article>; })}</div></div>;
+}
+
 function TeamHierarchyBuilder() {
   const { projects, teamRegistrations, assignEventTeam } = useProjectContext();
   const [date, setDate] = useState("");
@@ -53,7 +64,7 @@ function TeamHierarchyBuilder() {
 function TeamManagementPanel() {
   const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
-  const [activeSubsection, setActiveSubsection] = useState<"registrations" | "interests" | "hierarchy" | "hierarchy-builder">("registrations");
+  const [activeSubsection, setActiveSubsection] = useState<"registrations" | "interests" | "hierarchy" | "hierarchy-builder" | "live-tracker">("registrations");
   const [interestDate, setInterestDate] = useState("");
   const [hierarchyDate, setHierarchyDate] = useState("");
   const [openTeamEventId, setOpenTeamEventId] = useState<string | null>(null);
@@ -76,6 +87,7 @@ function TeamManagementPanel() {
         <button type="button" className={activeSubsection === "registrations" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("registrations")}>Team Registration</button>
         <button type="button" className={activeSubsection === "interests" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("interests")}>Interest Requests</button>
         <button type="button" className={activeSubsection === "hierarchy-builder" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("hierarchy-builder")}>Team Hierarchy</button>
+        <button type="button" className={activeSubsection === "live-tracker" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("live-tracker")}>Live Event Tracker</button>
       </div>
 
       {activeSubsection === "registrations" ? <div className="panel">
@@ -149,6 +161,7 @@ function TeamManagementPanel() {
       </div> : null}
 
       {activeSubsection === "hierarchy-builder" ? <TeamHierarchyBuilder /> : null}
+      {activeSubsection === "live-tracker" ? <LiveTrackerPanel /> : null}
 
       {activeSubsection === "hierarchy" ? <div className="panel">
         <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Build a separate team for each event from members who showed interest.</p></div><input aria-label="Filter hierarchy events by date" type="date" value={hierarchyDate} onChange={(event) => setHierarchyDate(event.target.value)} /></div>

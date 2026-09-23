@@ -1734,6 +1734,63 @@ button {
   background: var(--accent);
 }
 
+.event-day-tracker,
+.live-tracker-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.live-tracker-list {
+  display: grid;
+  gap: 16px;
+}
+
+.live-tracker-card {
+  margin-top: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(248, 248, 246, 0.72);
+}
+
+.tracker-members,
+.tracker-tasks,
+.tracker-chat {
+  display: grid;
+  gap: 8px;
+}
+
+.tracker-chat p {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.05);
+}
+
+.tracker-add-task {
+  display: flex;
+  gap: 8px;
+}
+
+.tracker-add-task input,
+.event-day-tracker textarea,
+.tracker-chat input {
+  min-height: 42px;
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.event-day-tracker textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
 .hierarchy-field-labels {
   display: grid;
   grid-template-columns: minmax(90px, 0.6fr) minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(90px, 0.6fr);

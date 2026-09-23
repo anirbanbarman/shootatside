@@ -1,10 +1,13 @@
 "use client";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { useState } from "react";
 import { formatDate, getProjectStatus } from "@/utils/status";
 
 export function TeamDashboard() {
-  const { projects, currentUser, requestTeamInterest } = useProjectContext();
+  const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage } = useProjectContext();
+  const [delayNotes, setDelayNotes] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<Record<string, string>>({});
   const confirmedProjects = projects.filter((project) => getProjectStatus(project) === "PROJECT_CONFIRMED");
 
   return (
@@ -36,6 +39,8 @@ export function TeamDashboard() {
               const detailsUnlocked = daysUntilEvent >= 0 && daysUntilEvent <= 7;
               const userType = assignedMember?.userType ?? (assignedMember?.role === "Team Leader" ? "Team Leader" : "Member");
               const isTeamLeader = userType === "Team Leader";
+              const isEventDay = new Date().toISOString().slice(0, 10) === project.eventDate;
+              const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] };
 
               return (
                 <article className="team-event" key={project.id}>
@@ -78,6 +83,11 @@ export function TeamDashboard() {
                       ) : null}
                     </div>
                   )}
+                  {assignedMember && isEventDay ? <div className="event-day-tracker">
+                    <p className="eyebrow">Event Day Tracker</p>
+                    {isTeamLeader ? <><button type="button" className="primary-button" onClick={() => markLeaderArrived(project.id)}>{tracker.leaderArrivedAt ? `Reached at ${new Date(tracker.leaderArrivedAt).toLocaleTimeString()}` : "I have reached the event"}</button><div className="tracker-members"><strong>Member attendance</strong>{project.eventTeam?.filter((member) => member.memberEmail !== currentUser?.email).map((member) => <label className="check-item" key={member.memberEmail}><input type="checkbox" checked={Boolean(tracker.memberJoinedAt[member.memberEmail])} onChange={() => toggleEventTrackerMember(project.id, member.memberEmail)} />{member.member} ({member.memberPhone || "No phone"}){tracker.memberJoinedAt[member.memberEmail] ? ` · Checked in at ${new Date(tracker.memberJoinedAt[member.memberEmail]).toLocaleTimeString()}` : " · Not checked in"}</label>)}</div><div className="tracker-tasks"><strong>Event checklist</strong>{tracker.tasks.map((task) => <label className="check-item" key={task.id}><input type="checkbox" checked={task.completed} onChange={() => toggleEventTrackerTask(project.id, task.id)} />{task.label}{task.completedAt ? ` · ${new Date(task.completedAt).toLocaleTimeString()}` : ""}</label>)}</div><textarea placeholder="Report a delay or issue" value={delayNotes[project.id] ?? tracker.delayNote ?? ""} onChange={(event) => setDelayNotes((current) => ({ ...current, [project.id]: event.target.value }))} /><button type="button" className="secondary-button" onClick={() => updateEventDelay(project.id, delayNotes[project.id] ?? "")}>Save Delay Note</button></> : <div className="tracker-members"><strong>My attendance</strong><label className="check-item"><input type="checkbox" checked={Boolean(tracker.memberJoinedAt[assignedMember?.memberEmail ?? currentUser?.email ?? ""])} onChange={() => toggleEventTrackerMember(project.id, assignedMember?.memberEmail ?? currentUser?.email ?? "")} />I have joined{tracker.memberJoinedAt[assignedMember?.memberEmail ?? currentUser?.email ?? ""] ? ` · Checked in at ${new Date(tracker.memberJoinedAt[assignedMember?.memberEmail ?? currentUser?.email ?? ""]).toLocaleTimeString()}` : ""}</label></div>}
+                    <div className="tracker-chat"><strong>Admin chat</strong>{tracker.messages.map((message) => <p key={message.id}><b>{message.sender}</b> · {message.message}</p>)}<input placeholder="Message admin" value={messages[project.id] ?? ""} onChange={(event) => setMessages((current) => ({ ...current, [project.id]: event.target.value }))} /><button type="button" className="secondary-button" onClick={() => { if (messages[project.id]?.trim()) { sendEventTrackerMessage(project.id, messages[project.id].trim(), "team-leader"); setMessages((current) => ({ ...current, [project.id]: "" })); } }}>Send Message</button></div>
+                  </div> : null}
                 </article>
               );
             })}

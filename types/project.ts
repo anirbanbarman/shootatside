@@ -74,6 +74,29 @@ export interface TeamBrief {
   updatedAt: string;
 }
 
+export interface EventTrackerTask {
+  id: string;
+  label: string;
+  completed: boolean;
+  completedAt?: string;
+}
+
+export interface EventTrackerMessage {
+  id: string;
+  sender: string;
+  senderRole: "admin" | "team-leader";
+  message: string;
+  sentAt: string;
+}
+
+export interface EventTracker {
+  leaderArrivedAt?: string;
+  memberJoinedAt: Record<string, string>;
+  tasks: EventTrackerTask[];
+  delayNote?: string;
+  messages: EventTrackerMessage[];
+}
+
 export interface TeamInterest {
   member: string;
   memberEmail: string;
@@ -145,6 +168,7 @@ export interface Project {
   teamAssignment?: TeamAssignment;
   eventTeam?: EventTeamMember[];
   teamBrief?: TeamBrief;
+  eventTracker?: EventTracker;
   teamInterest?: TeamInterest[];
 }
 

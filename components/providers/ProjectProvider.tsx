@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { mockProjects } from "@/data/mockProjects";
-import type { EventTeamMember, Project, TeamInterest, TeamMember, TeamMemberRole, TeamRegistration, ViewMode } from "@/types/project";
+import type { EventTeamMember, EventTracker, EventTrackerTask, Project, TeamInterest, TeamMember, TeamMemberRole, TeamRegistration, ViewMode } from "@/types/project";
 
 type UserRole = "admin" | "client" | "team";
 
@@ -69,6 +69,12 @@ interface ProjectContextValue {
   assignTeam: (projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => void;
   assignEventTeam: (projectId: string, assignments: Omit<EventTeamMember, "assignedAt">[]) => void;
   updateClientTeamBrief: (projectId: string, brief: { callTime: string; callVenue: string }) => void;
+  addEventTrackerTask: (projectId: string, label: string) => void;
+  toggleEventTrackerMember: (projectId: string, memberEmail: string) => void;
+  markLeaderArrived: (projectId: string) => void;
+  toggleEventTrackerTask: (projectId: string, taskId: string) => void;
+  updateEventDelay: (projectId: string, delayNote: string) => void;
+  sendEventTrackerMessage: (projectId: string, message: string, senderRole: "admin" | "team-leader") => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
@@ -616,6 +622,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       : project));
   }, []);
 
+  const updateTracker = useCallback((projectId: string, update: (tracker: EventTracker) => EventTracker) => {
+    setProjects((current) => current.map((project) => project.id === projectId ? { ...project, eventTracker: update(project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }) } : project));
+  }, []);
+  const addEventTrackerTask = useCallback((projectId: string, label: string) => updateTracker(projectId, (tracker) => ({ ...tracker, tasks: [...tracker.tasks, { id: `TASK-${Date.now()}`, label, completed: false }] })), [updateTracker]);
+  const toggleEventTrackerMember = useCallback((projectId: string, memberEmail: string) => updateTracker(projectId, (tracker) => { const joined = tracker.memberJoinedAt[memberEmail]; const memberJoinedAt = { ...tracker.memberJoinedAt }; if (joined) delete memberJoinedAt[memberEmail]; else memberJoinedAt[memberEmail] = new Date().toISOString(); return { ...tracker, memberJoinedAt }; }), [updateTracker]);
+  const markLeaderArrived = useCallback((projectId: string) => updateTracker(projectId, (tracker) => ({ ...tracker, leaderArrivedAt: tracker.leaderArrivedAt ? undefined : new Date().toISOString() })), [updateTracker]);
+  const toggleEventTrackerTask = useCallback((projectId: string, taskId: string) => updateTracker(projectId, (tracker) => ({ ...tracker, tasks: tracker.tasks.map((task) => task.id === taskId ? { ...task, completed: !task.completed, completedAt: task.completed ? undefined : new Date().toISOString() } : task) })), [updateTracker]);
+  const updateEventDelay = useCallback((projectId: string, delayNote: string) => updateTracker(projectId, (tracker) => ({ ...tracker, delayNote })), [updateTracker]);
+  const sendEventTrackerMessage = useCallback((projectId: string, message: string, senderRole: "admin" | "team-leader") => updateTracker(projectId, (tracker) => ({ ...tracker, messages: [...tracker.messages, { id: `MSG-${Date.now()}`, sender: currentUser?.name ?? senderRole, senderRole, message, sentAt: new Date().toISOString() }] })), [currentUser, updateTracker]);
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       view,
@@ -653,8 +669,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       assignTeam,
       assignEventTeam,
       updateClientTeamBrief,
+      addEventTrackerTask,
+      toggleEventTrackerMember,
+      markLeaderArrived,
+      toggleEventTrackerTask,
+      updateEventDelay,
+      sendEventTrackerMessage,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, teamMembers, teamRegistrations, updateClientTeamBrief, view],
+    [acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, markLeaderArrived, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEventTrackerMessage, sendNegotiation, sendQuote, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEventDelay, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

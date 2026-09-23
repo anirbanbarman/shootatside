@@ -115,6 +115,29 @@ Team portal event access is role-aware and time-limited. The event team assignme
 
 After the admin creates an event team, the client can set a team call time and call venue from the client project details. The saved values are visible to admin and assigned team members. Team members see them within the existing seven-day event visibility window. The client sees the assigned Team Leader name and phone within that same window.
 
+## Event-Day Live Tracker
+
+Admin can open **Team Management > Live Event Tracker** for events with a saved team.
+
+- Admin can add checklist tasks for the event.
+- Admin can see the Team Leader arrival timestamp.
+- Admin can see each assigned member's joined/not-joined state and timestamp.
+- Admin can mark checklist tasks complete; completion timestamps are stored.
+- Admin can review delay or issue notes from the Team Leader.
+- Admin and Team Leader can exchange messages in the event tracker chat.
+
+On the event date, the assigned Team Leader can:
+
+- Mark that they have reached the event.
+- Mark each assigned member as joined using checkboxes.
+- Complete the admin-created event checklist items.
+- Write and save a delay or issue note.
+- Send messages to the admin.
+
+Each assigned member can also check in individually from their own team portal. The same `memberJoinedAt` timestamp is stored whether the member checks in personally or the Team Leader checks them in, so admin sees the source-independent attendance state and time.
+
+All tracker state is stored on the project in `eventTracker` and persists through browser `localStorage` in the current demo implementation.
+
 ## Data Model
 
 Important fields include:
