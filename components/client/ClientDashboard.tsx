@@ -11,7 +11,7 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatCurrency, formatDate } from "@/utils/status";
 
 export function ClientDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief } = useProjectContext();
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isRequestFormModalOpen, setRequestFormModalOpen] = useState(false);
@@ -22,6 +22,7 @@ export function ClientDashboard() {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
+  const [teamBrief, setTeamBrief] = useState({ callTime: "", callVenue: "" });
 
   const clientProjects = useMemo(() => projects.filter((project) => project.client.email.includes("@") && project.client.phone), [projects]);
 
@@ -37,6 +38,16 @@ export function ClientDashboard() {
   const currentQuote = selectedProject.negotiation ?? selectedProject.initialQuote;
   const advancePercent = currentQuote?.advancePercent ?? selectedProject.payment?.advancePercent ?? 30;
   const advanceAmount = selectedProject.payment?.amount ?? Math.round(((currentQuote?.amount ?? 0) * advancePercent) / 100);
+  const eventTeamLeader = selectedProject.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
+  const eventDateStart = new Date(`${selectedProject.eventDate}T00:00:00`).getTime();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const teamDetailsUnlocked = Math.ceil((eventDateStart - todayStart.getTime()) / (1000 * 60 * 60 * 24)) >= 0 && Math.ceil((eventDateStart - todayStart.getTime()) / (1000 * 60 * 60 * 24)) <= 7;
+
+  const handleTeamBriefSubmit = () => {
+    if (!teamBrief.callTime.trim() || !teamBrief.callVenue.trim()) return;
+    updateClientTeamBrief(selectedProject.id, teamBrief);
+  };
 
   const handleAcceptQuote = () => {
     acceptQuote(selectedProject.id);
@@ -126,6 +137,17 @@ export function ClientDashboard() {
                 <div className="full-width"><label>Requirements</label><p>{selectedProject.requirements}</p></div>
               </div>
             </div>
+
+            {selectedProject.eventTeam?.length ? <div className="section-block">
+              <p className="eyebrow">Team Call Details</p>
+              <div className="form-stack">
+                <div><label htmlFor="team-call-time">Call Time</label><input id="team-call-time" type="datetime-local" value={teamBrief.callTime || selectedProject.teamBrief?.callTime || ""} onChange={(event) => setTeamBrief((current) => ({ ...current, callTime: event.target.value }))} /></div>
+                <div><label htmlFor="team-call-venue">Call Venue</label><input id="team-call-venue" value={teamBrief.callVenue || selectedProject.teamBrief?.callVenue || ""} onChange={(event) => setTeamBrief((current) => ({ ...current, callVenue: event.target.value }))} placeholder="Meeting point / venue" /></div>
+                <button type="button" className="primary-button" onClick={handleTeamBriefSubmit}>Save Call Details</button>
+              </div>
+              {selectedProject.teamBrief ? <div className="quote-box"><div className="quote-row"><strong>Saved Call Time</strong><span>{new Date(selectedProject.teamBrief.callTime).toLocaleString()}</span></div><div className="quote-row"><strong>Saved Call Venue</strong><span>{selectedProject.teamBrief.callVenue}</span></div></div> : null}
+              {teamDetailsUnlocked && eventTeamLeader ? <div className="success-box">Team Leader: {eventTeamLeader.member} · {eventTeamLeader.memberPhone || "Phone not provided"}</div> : <p className="form-note">Team Leader contact details will be visible 7 days before the event.</p>}
+            </div> : null}
 
             {currentQuote ? (
               <div className="section-block">

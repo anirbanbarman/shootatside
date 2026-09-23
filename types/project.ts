@@ -60,11 +60,18 @@ export interface EventTeamMember {
   memberEmail: string;
   memberPhone?: string;
   role: TeamMemberRole;
+  userType?: TeamUserType;
   date: string;
   camera: string;
   gear: string;
   notes: string;
   assignedAt: string;
+}
+
+export interface TeamBrief {
+  callTime: string;
+  callVenue: string;
+  updatedAt: string;
 }
 
 export interface TeamInterest {
@@ -75,6 +82,7 @@ export interface TeamInterest {
 }
 
 export type TeamRegistrationStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+export type TeamUserType = "Team Leader" | "Member";
 
 export interface TeamRegistration {
   id: string;
@@ -86,6 +94,7 @@ export interface TeamRegistration {
   aadharFileName: string;
   selfieFileName: string;
   phonePe: string;
+  userType: TeamUserType;
   preferredRoles: TeamMemberRole[];
   username?: string;
   password?: string;
@@ -135,6 +144,7 @@ export interface Project {
   payment?: AdvancePayment;
   teamAssignment?: TeamAssignment;
   eventTeam?: EventTeamMember[];
+  teamBrief?: TeamBrief;
   teamInterest?: TeamInterest[];
 }
 

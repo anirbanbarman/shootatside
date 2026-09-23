@@ -68,6 +68,7 @@ interface ProjectContextValue {
   rejectTeamInterest: (projectId: string, memberEmail: string) => void;
   assignTeam: (projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => void;
   assignEventTeam: (projectId: string, assignments: Omit<EventTeamMember, "assignedAt">[]) => void;
+  updateClientTeamBrief: (projectId: string, brief: { callTime: string; callVenue: string }) => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
@@ -148,6 +149,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
     const storedTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
       ...registration,
+      userType: registration.userType ?? "Member",
       preferredRoles: registration.preferredRoles ?? [],
     }));
     const storedTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
@@ -608,6 +610,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       : project));
   }, []);
 
+  const updateClientTeamBrief = useCallback((projectId: string, brief: { callTime: string; callVenue: string }) => {
+    setProjects((current) => current.map((project) => project.id === projectId && project.eventTeam?.length
+      ? { ...project, teamBrief: { ...brief, updatedAt: new Date().toISOString() } }
+      : project));
+  }, []);
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       view,
@@ -644,8 +652,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       rejectTeamInterest,
       assignTeam,
       assignEventTeam,
+      updateClientTeamBrief,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, teamMembers, teamRegistrations, view],
+    [acceptNegotiation, acceptQuote, activeRole, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendNegotiation, sendQuote, teamMembers, teamRegistrations, updateClientTeamBrief, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

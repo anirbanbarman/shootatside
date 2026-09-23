@@ -16,6 +16,7 @@ The `/team` route shows the team login screen until an approved team account log
 - Aadhar file selection
 - Selfie file selection
 - PhonePe number
+- User Type: `Team Leader` or `Member`
 - One or more preferred team roles
 
 The available preferred roles are:
@@ -99,6 +100,20 @@ The graph displays:
 4. Each person’s name, phone number, and assigned role
 
 The graph is event-specific, so each event card shows only its own assigned team.
+
+## Team Portal Visibility
+
+Team portal event access is role-aware and time-limited. The event team assignment determines whether the logged-in person is a `Team Leader` or another team member.
+
+- Before the event enters the seven-day window, assigned members do not see client contact details or the event address.
+- From seven days before the event through the event date, a Team Leader can see the client name, client phone, event address, and the assigned members under that leader.
+- From seven days before the event through the event date, other assigned members can see only the Team Leader name and phone number.
+- Other members do not see any client details.
+- An approved interested member who has not been assigned to the event sees an assignment-pending message.
+
+## Client Team Call Details
+
+After the admin creates an event team, the client can set a team call time and call venue from the client project details. The saved values are visible to admin and assigned team members. Team members see them within the existing seven-day event visibility window. The client sees the assigned Team Leader name and phone within that same window.
 
 ## Data Model
 

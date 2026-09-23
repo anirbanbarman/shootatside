@@ -1548,7 +1548,7 @@ button {
 
 .hierarchy-member-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(130px, 1fr) minmax(180px, 1.2fr) minmax(150px, 1fr) auto;
+  grid-template-columns: minmax(90px, 0.6fr) minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(130px, 1fr) minmax(150px, 1fr) auto;
 }
 
 .hierarchy-member-row input,
@@ -1559,6 +1559,14 @@ button {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
+}
+
+.hierarchy-member-row select[disabled] {
+  display: none;
+}
+
+.hierarchy-empty-cell {
+  display: block;
 }
 
 .hierarchy-member-row:has(input[aria-label^="Team member name"][value=""]) select:first-of-type {
@@ -1728,7 +1736,7 @@ button {
 
 .hierarchy-field-labels {
   display: grid;
-  grid-template-columns: minmax(90px, 0.6fr) minmax(150px, 1fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(90px, 0.6fr);
+  grid-template-columns: minmax(90px, 0.6fr) minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(90px, 0.6fr);
   gap: 10px;
   color: var(--muted);
   font-size: 0.76rem;

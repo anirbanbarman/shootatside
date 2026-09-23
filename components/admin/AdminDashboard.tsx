@@ -7,44 +7,44 @@ import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
-import { TEAM_MEMBER_ROLES, type TeamMemberRole } from "@/types/project";
+import { TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamUserType } from "@/types/project";
 import { formatCurrency, formatDate } from "@/utils/status";
 
 function TeamHierarchyBuilder() {
   const { projects, teamRegistrations, assignEventTeam } = useProjectContext();
   const [date, setDate] = useState("");
   const [openEvent, setOpenEvent] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, { kind: "interested" | "custom"; memberEmail: string; name: string; phone: string; role: TeamMemberRole }[]>>({});
+  const [drafts, setDrafts] = useState<Record<string, { kind: "interested" | "custom"; memberEmail: string; name: string; phone: string; userType: TeamUserType; role: TeamMemberRole }[]>>({});
 
   return <div className="panel">
     <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Add interested members or create custom team members for each event.</p></div><label><span>Filter by event date</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label></div>
     <div className="event-hierarchy-list">{projects.filter((project) => !date || project.eventDate === date).map((project) => {
       const interested = (project.teamInterest ?? []).map((interest) => ({ interest, registration: teamRegistrations.find((registration) => registration.email === interest.memberEmail) })).filter((item) => item.registration);
-      const rows = drafts[project.id] ?? project.eventTeam?.map((member) => ({ kind: "custom" as const, memberEmail: member.memberEmail, name: member.member, phone: member.memberPhone ?? "", role: member.role })) ?? [];
+      const rows = drafts[project.id] ?? project.eventTeam?.map((member) => ({ kind: "custom" as const, memberEmail: member.memberEmail, name: member.member, phone: member.memberPhone ?? "", userType: member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member") as TeamUserType, role: member.role })) ?? [];
       const updateRows = (nextRows: typeof rows) => setDrafts((current) => ({ ...current, [project.id]: nextRows }));
       const addInterested = () => {
         const option = interested.find((item) => !rows.some((row) => row.memberEmail === item.interest.memberEmail));
         if (!option) return;
-        updateRows([...rows, { kind: "interested", memberEmail: option.interest.memberEmail, name: option.interest.member, phone: option.registration?.mobile ?? "", role: option.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] }]);
+        updateRows([...rows, { kind: "interested", memberEmail: option.interest.memberEmail, name: option.interest.member, phone: option.registration?.mobile ?? "", userType: option.registration?.userType ?? "Member", role: option.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] }]);
       };
-      const addCustom = () => updateRows([...rows, { kind: "custom", memberEmail: `manual-${Date.now()}`, name: "", phone: "", role: TEAM_MEMBER_ROLES[0] }]);
+      const addCustom = () => updateRows([...rows, { kind: "custom", memberEmail: `manual-${Date.now()}`, name: "", phone: "", userType: "Member", role: TEAM_MEMBER_ROLES[0] }]);
       return <article className="hierarchy-event" key={project.id}>
         <div className="hierarchy-event-header"><div><p className="eyebrow">{project.id}</p><h3>{project.client.name} · {project.eventType}</h3><p>{formatDate(project.eventDate)} · {project.venue}</p></div><button type="button" className="primary-button" onClick={() => setOpenEvent((current) => current === project.id ? null : project.id)}>Make My Team</button></div>
         <div className="hierarchy-interests"><strong>Interested members</strong>{interested.length === 0 ? <span>No team member interest yet.</span> : interested.map(({ interest }) => <span className="pill" key={interest.memberEmail}>{interest.member} · {interest.status}</span>)}</div>
         {openEvent === project.id ? <div className="hierarchy-builder">
-          {rows.length > 0 ? <div className="hierarchy-field-labels"><span>Type</span><span>Name</span><span>Phone Number</span><span>Role</span><span>Action</span></div> : null}
+          {rows.length > 0 ? <div className="hierarchy-field-labels"><span>User Type</span><span>Interested Member</span><span>Name</span><span>Phone Number</span><span>Role</span><span>Action</span></div> : null}
           {rows.map((row, index) => {
             const selected = interested.find((item) => item.interest.memberEmail === row.memberEmail);
             const roles = row.kind === "interested" ? selected?.registration?.preferredRoles ?? [] : TEAM_MEMBER_ROLES;
             return <div className="hierarchy-member-row" key={`${row.memberEmail}-${index}`}>
-              <strong className="hierarchy-row-kind">{row.kind === "interested" ? "Interested" : "Custom"}</strong>
-              {row.kind === "interested" ? <><select aria-label={`Interested member ${index + 1}`} value={row.memberEmail} onChange={(event) => { const next = interested.find((item) => item.interest.memberEmail === event.target.value); updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, memberEmail: event.target.value, name: next?.interest.member ?? "", phone: next?.registration?.mobile ?? "", role: next?.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] } : item)); }}>{interested.map(({ interest }) => <option key={interest.memberEmail} value={interest.memberEmail}>{interest.member}</option>)}</select><input aria-label={`Interested member name ${index + 1}`} value={row.name} disabled /><input aria-label={`Interested member phone ${index + 1}`} value={row.phone} disabled /></> : <><input aria-label={`Custom member name ${index + 1}`} placeholder="Name" value={row.name} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /><input aria-label={`Custom member phone ${index + 1}`} placeholder="Phone number" value={row.phone} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, phone: event.target.value } : item))} /></>}
+              {row.kind === "interested" ? <select aria-label={`Editable user type for interested member ${index + 1}`} value={row.userType} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, userType: event.target.value as TeamUserType } : item))}><option value="Team Leader">Team Leader</option><option value="Member">Member</option></select> : <span className="hierarchy-empty-cell" />}
+              {row.kind === "interested" ? <><select aria-label={`User type for interested member ${index + 1}`} value={row.userType} disabled><option value="Team Leader">Team Leader</option><option value="Member">Member</option></select><select aria-label={`Interested member ${index + 1}`} value={row.memberEmail} onChange={(event) => { const next = interested.find((item) => item.interest.memberEmail === event.target.value); updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, memberEmail: event.target.value, name: next?.interest.member ?? "", phone: next?.registration?.mobile ?? "", userType: next?.registration?.userType ?? "Member", role: next?.registration?.preferredRoles[0] ?? TEAM_MEMBER_ROLES[0] } : item)); }}>{interested.map(({ interest }) => <option key={interest.memberEmail} value={interest.memberEmail}>{interest.member}</option>)}</select><input aria-label={`Interested member name ${index + 1}`} value={row.name} disabled /><input aria-label={`Interested member phone ${index + 1}`} value={row.phone} disabled /></> : <><select aria-label={`User type for custom member ${index + 1}`} value={row.userType} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, userType: event.target.value as TeamUserType } : item))}><option value="Team Leader">Team Leader</option><option value="Member">Member</option></select><input aria-label={`Custom member name ${index + 1}`} placeholder="Name" value={row.name} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /><input aria-label={`Custom member phone ${index + 1}`} placeholder="Phone number" value={row.phone} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, phone: event.target.value } : item))} /></>}
               <select aria-label={`Role ${index + 1}`} value={row.role} onChange={(event) => updateRows(rows.map((item, rowIndex) => rowIndex === index ? { ...item, role: event.target.value as TeamMemberRole } : item))}>{roles.map((role) => <option key={role} value={role}>{role}</option>)}</select><button type="button" className="danger-button" onClick={() => updateRows(rows.filter((_, rowIndex) => rowIndex !== index))}>Remove</button>
             </div>;
           })}
-          <div className="hierarchy-builder-actions"><div className="hierarchy-add-actions"><button type="button" className="secondary-button hierarchy-add-button" onClick={addInterested}>Add Interested Member</button><button type="button" className="secondary-button hierarchy-add-button" onClick={addCustom}>Add Team Member</button></div><button type="button" className="success-button" onClick={() => assignEventTeam(project.id, rows.map((row) => ({ memberEmail: row.memberEmail, member: row.name, memberPhone: row.phone, role: row.role, date: project.eventDate, camera: "", gear: "", notes: "" })))}>Save Team</button></div>
+          <div className="hierarchy-builder-actions"><div className="hierarchy-add-actions">{rows.filter((row) => row.kind === "interested").length < interested.length ? <button type="button" className="secondary-button hierarchy-add-button" onClick={addInterested}>Add Interested Member</button> : null}<button type="button" className="secondary-button hierarchy-add-button" onClick={addCustom}>Add Team Member</button></div><button type="button" className="success-button" onClick={() => assignEventTeam(project.id, rows.map((row) => ({ memberEmail: row.memberEmail, member: row.name, memberPhone: row.phone, userType: row.userType, role: row.role, date: project.eventDate, camera: "", gear: "", notes: "" })))}>Save Team</button></div>
         </div> : null}
-        {project.eventTeam?.length ? <div className="team-hierarchy-graph"><div className="panel-header"><h3>Team Hierarchy Graph</h3><span className="pill">Leader to members</span></div>{(() => { const members = project.eventTeam ?? []; const leaders = members.filter((member) => member.role === "Team Leader"); const crew = members.filter((member) => member.role !== "Team Leader"); return <div className="hierarchy-graph-event"><div className="hierarchy-graph-root"><strong>{project.eventType}</strong><span>{formatDate(project.eventDate)} · {project.client.name}</span></div><div className="hierarchy-graph-line" />{leaders.length > 0 ? <div className="hierarchy-graph-leaders">{leaders.map((leader) => <div className="hierarchy-graph-person leader" key={`${project.id}-${leader.memberEmail}-${leader.role}`}><strong>{leader.member}</strong><span>{leader.memberPhone || "Phone not provided"}</span><small>{leader.role}</small></div>)}</div> : <div className="empty-state small">No Team Leader assigned.</div>}<div className="hierarchy-graph-line" />{crew.length > 0 ? <div className="hierarchy-graph-crew">{crew.map((member) => <div className="hierarchy-graph-person" key={`${project.id}-${member.memberEmail}-${member.role}`}><strong>{member.member}</strong><span>{member.memberPhone || "Phone not provided"}</span><small>{member.role}</small></div>)}</div> : null}</div>; })()}</div> : null}
+        {project.eventTeam?.length ? <div className="team-hierarchy-graph"><div className="panel-header"><h3>Team Hierarchy Graph</h3><span className="pill">User type hierarchy</span></div>{(() => { const members = project.eventTeam ?? []; const leaders = members.filter((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader"); const crew = members.filter((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) !== "Team Leader"); return <div className="hierarchy-graph-event"><div className="hierarchy-graph-root"><strong>{project.eventType}</strong><span>{formatDate(project.eventDate)} · {project.client.name}</span></div><div className="hierarchy-graph-line" />{leaders.length > 0 ? <div className="hierarchy-graph-leaders">{leaders.map((leader) => <div className="hierarchy-graph-person leader" key={`${project.id}-${leader.memberEmail}-${leader.role}`}><strong>{leader.member}</strong><span>{leader.memberPhone || "Phone not provided"}</span><small>User Type: Team Leader</small><small>Role: {leader.role}</small></div>)}</div> : <div className="empty-state small">No Team Leader assigned.</div>}<div className="hierarchy-graph-line" />{crew.length > 0 ? <div className="hierarchy-graph-crew">{crew.map((member) => <div className="hierarchy-graph-person" key={`${project.id}-${member.memberEmail}-${member.role}`}><strong>{member.member}</strong><span>{member.memberPhone || "Phone not provided"}</span><small>User Type: Member</small><small>Role: {member.role}</small></div>)}</div> : null}</div>; })()}</div> : null}
       </article>;
     })}</div>
   </div>;
@@ -98,7 +98,7 @@ function TeamManagementPanel() {
                   <div className="team-registration-details">
                     <span>WhatsApp: {registration.whatsapp}</span><span>PhonePe: {registration.phonePe}</span><span>Address: {registration.address}</span>
                     <span>Aadhar: {registration.aadharFileName}</span><span>Selfie: {registration.selfieFileName}</span>
-                    <span>Preferred roles: {registration.preferredRoles?.join(", ") || "Not selected"}</span>
+                    <span>User type: {registration.userType || "Member"}</span><span>Preferred roles: {registration.preferredRoles?.join(", ") || "Not selected"}</span>
                   </div>
                   {registration.status === "PENDING" ? <div className="team-registration-actions">
                     <input aria-label={`Username for ${registration.name}`} placeholder="Set username" value={formValues.username} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, username: event.target.value } }))} />
@@ -183,7 +183,7 @@ function TeamManagementPanel() {
 }
 
 export function AdminDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, assignTeam, resetDemoProjects, seedDemoProject } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, resetDemoProjects, seedDemoProject } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
@@ -195,15 +195,6 @@ export function AdminDashboard() {
   const [negotiationError, setNegotiationError] = useState("");
   const [negotiationSuccess, setNegotiationSuccess] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
-  const [assignmentForm, setAssignmentForm] = useState({
-    member: "",
-    date: "",
-    camera: "",
-    gear: "",
-    notes: "",
-  });
-  const [assignmentError, setAssignmentError] = useState("");
-  const [assignmentSuccess, setAssignmentSuccess] = useState("");
   const [activeSection, setActiveSection] = useState<"dashboard" | "team-management">("dashboard");
 
   const selectedProject = useMemo(
@@ -280,18 +271,6 @@ export function AdminDashboard() {
     setNegotiationAmount("");
     setNegotiationComment("");
     setNegotiationAdvancePercent("30");
-  };
-
-  const handleAssignTeam = () => {
-    if (!assignmentForm.member.trim() || !assignmentForm.date || !assignmentForm.camera.trim()) {
-      setAssignmentError("Please provide the team member, shoot date, and camera details.");
-      setAssignmentSuccess("");
-      return;
-    }
-
-    assignTeam(selectedProject.id, assignmentForm);
-    setAssignmentError("");
-    setAssignmentSuccess("Team assignment saved successfully.");
   };
 
   return (
@@ -380,6 +359,7 @@ export function AdminDashboard() {
                 <div><label>Guests</label><p>{selectedProject.guestCount}</p></div>
                 <div><label>Status</label><div className="status-inline"><StatusBadge project={selectedProject} /></div></div>
                 <div className="full-width"><label>Requirements</label><p>{selectedProject.requirements}</p></div>
+                {selectedProject.teamBrief ? <><div><label>Team Call Time</label><p>{new Date(selectedProject.teamBrief.callTime).toLocaleString()}</p></div><div><label>Team Call Venue</label><p>{selectedProject.teamBrief.callVenue}</p></div></> : null}
               </div>
             </div>
 
@@ -463,49 +443,6 @@ export function AdminDashboard() {
               </div>
             ) : null}
 
-            {selectedProject.clientResponse?.type === "ACCEPTED" || selectedProject.negotiationResponse?.type === "ACCEPTED" ? (
-              <div className="section-block">
-                <p className="eyebrow">Team Assignment</p>
-                {selectedProject.teamAssignment ? (
-                  <div className="quote-box">
-                    <div className="quote-row"><strong>Assigned Member</strong> <span>{selectedProject.teamAssignment.member}</span></div>
-                    <div className="quote-row"><strong>Shot Date</strong> <span>{formatDate(selectedProject.teamAssignment.date)}</span></div>
-                    <div className="quote-row"><strong>Camera</strong> <span>{selectedProject.teamAssignment.camera}</span></div>
-                    <div className="quote-row"><strong>Gear</strong> <span>{selectedProject.teamAssignment.gear}</span></div>
-                    <div className="quote-comment">
-                      <strong>Notes</strong>
-                      <p>{selectedProject.teamAssignment.notes || "No extra notes added."}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="form-stack">
-                    <div>
-                      <label>Team Member</label>
-                      <input value={assignmentForm.member} onChange={(event) => setAssignmentForm((current) => ({ ...current, member: event.target.value }))} placeholder="Aman Roy" />
-                    </div>
-                    <div>
-                      <label>Shoot Date</label>
-                      <input type="date" value={assignmentForm.date} onChange={(event) => setAssignmentForm((current) => ({ ...current, date: event.target.value }))} />
-                    </div>
-                    <div>
-                      <label>Camera</label>
-                      <input value={assignmentForm.camera} onChange={(event) => setAssignmentForm((current) => ({ ...current, camera: event.target.value }))} placeholder="Sony A7 IV + 24-70mm" />
-                    </div>
-                    <div>
-                      <label>Gear / Crew</label>
-                      <input value={assignmentForm.gear} onChange={(event) => setAssignmentForm((current) => ({ ...current, gear: event.target.value }))} placeholder="2 shooters, drone, lighting kit" />
-                    </div>
-                    <div>
-                      <label>Notes</label>
-                      <textarea rows={4} value={assignmentForm.notes} onChange={(event) => setAssignmentForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Arrival time, location briefing, and deliverables." />
-                    </div>
-                    {assignmentError ? <div className="error-box">{assignmentError}</div> : null}
-                    {assignmentSuccess ? <div className="success-box">{assignmentSuccess}</div> : null}
-                    <button type="button" className="primary-button" onClick={handleAssignTeam}>Assign Team</button>
-                  </div>
-                )}
-              </div>
-            ) : null}
           </div>
         </div>
 

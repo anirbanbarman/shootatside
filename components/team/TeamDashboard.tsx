@@ -27,6 +27,15 @@ export function TeamDashboard() {
               const isApprovedForMember = interest?.status === "ACCEPTED";
               const hasPendingInterest = interest?.status === "PENDING";
               const hasRejectedInterest = interest?.status === "REJECTED";
+              const assignedMember = project.eventTeam?.find((member) => member.memberEmail === currentUser?.email);
+              const teamLeader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
+              const eventStart = new Date(`${project.eventDate}T00:00:00`).getTime();
+              const todayStart = new Date();
+              todayStart.setHours(0, 0, 0, 0);
+              const daysUntilEvent = Math.ceil((eventStart - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+              const detailsUnlocked = daysUntilEvent >= 0 && daysUntilEvent <= 7;
+              const userType = assignedMember?.userType ?? (assignedMember?.role === "Team Leader" ? "Team Leader" : "Member");
+              const isTeamLeader = userType === "Team Leader";
 
               return (
                 <article className="team-event" key={project.id}>
@@ -41,20 +50,21 @@ export function TeamDashboard() {
                   <div className="team-event-details">
                     <div><span>Event</span><strong>{project.eventType}</strong></div>
                     <div><span>Date</span><strong>{formatDate(project.eventDate)}</strong></div>
-                    <div><span>Venue</span><strong>{project.venue}</strong></div>
-                    <div><span>Guests</span><strong>{project.guestCount}</strong></div>
+                    {assignedMember ? <div><span>User Type</span><strong>{userType}</strong></div> : null}
+                    {isTeamLeader && detailsUnlocked ? <><div><span>Address</span><strong>{project.venue}</strong></div><div><span>Guests</span><strong>{project.guestCount}</strong></div></> : null}
                   </div>
 
                   {isApprovedForMember ? (
-                    <div className="team-event-full-details">
-                      <div><span>Client Email</span><strong>{project.client.email}</strong></div>
-                      <div><span>Client Phone</span><strong>{project.client.phone}</strong></div>
-                      <div className="team-event-requirements"><span>Requirements</span><strong>{project.requirements}</strong></div>
-                      {project.teamAssignment ? (
-                        <div className="team-event-assignment"><span>Team Brief</span><strong>{project.teamAssignment.notes || "See the event brief and arrive prepared."}</strong></div>
-                      ) : null}
-                      {project.eventTeam?.length ? <div className="team-event-assignment"><span>Event Team</span><strong>{project.eventTeam.map((member) => `${member.member} (${member.role})`).join(", ")}</strong></div> : null}
-                    </div>
+                    assignedMember ? detailsUnlocked ? <div className="team-event-full-details">
+                      <div><span>User Type</span><strong>{userType}</strong></div>
+                      {project.teamBrief ? <><div><span>Call Time</span><strong>{new Date(project.teamBrief.callTime).toLocaleString()}</strong></div><div><span>Call Venue</span><strong>{project.teamBrief.callVenue}</strong></div></> : null}
+                      {isTeamLeader ? <div><span>Client Phone</span><strong>{project.client.phone}</strong></div> : null}
+                      {isTeamLeader ? <>
+                        <div><span>Client Name</span><strong>{project.client.name}</strong></div>
+                        <div><span>Address</span><strong>{project.venue}</strong></div>
+                        {project.eventTeam?.length ? <div className="team-event-assignment"><span>Team Members</span><strong>{project.eventTeam.filter((member) => member.memberEmail !== currentUser?.email).map((member) => `${member.member} · ${member.memberPhone || "Phone not provided"} · ${member.role}`).join(", ") || "No other members assigned."}</strong></div> : null}
+                      </> : <><div><span>Team Leader Name</span><strong>{teamLeader?.member || "Not assigned"}</strong></div><div><span>Team Leader Phone</span><strong>{teamLeader?.memberPhone || "Not provided"}</strong></div></>}
+                    </div> : <div className="team-event-action"><p>Contact details will be visible 7 days before the event.</p></div> : <div className="team-event-action"><p>Admin approved your interest. Waiting for event team assignment.</p></div>
                   ) : (
                     <div className="team-event-action">
                       <p>{hasPendingInterest ? "Your interest is waiting for admin approval." : hasRejectedInterest ? "Admin rejected this request." : "Request access to see the full event brief."}</p>

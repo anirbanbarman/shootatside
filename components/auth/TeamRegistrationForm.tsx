@@ -4,10 +4,12 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { TEAM_MEMBER_ROLES, type TeamMemberRole } from "@/types/project";
+import type { TeamUserType } from "@/types/project";
 
 export function TeamRegistrationForm({ onComplete }: { onComplete: () => void }) {
   const { registerTeam } = useProjectContext();
   const [form, setForm] = useState({ name: "", mobile: "", whatsapp: "", email: "", address: "", phonePe: "" });
+  const [userType, setUserType] = useState<TeamUserType>("Member");
   const [preferredRoles, setPreferredRoles] = useState<TeamMemberRole[]>([]);
   const [aadharFileName, setAadharFileName] = useState("");
   const [selfieFileName, setSelfieFileName] = useState("");
@@ -24,7 +26,7 @@ export function TeamRegistrationForm({ onComplete }: { onComplete: () => void })
       return;
     }
 
-    registerTeam({ ...form, aadharFileName, selfieFileName, preferredRoles });
+    registerTeam({ ...form, aadharFileName, selfieFileName, userType, preferredRoles });
     setError("");
     setSuccess(true);
   };
@@ -44,6 +46,7 @@ export function TeamRegistrationForm({ onComplete }: { onComplete: () => void })
         <div className="form-group"><label htmlFor="registration-aadhar">Aadhar Card Upload</label><input id="registration-aadhar" type="file" accept="image/*,.pdf" required onChange={updateFile(setAadharFileName)} /></div>
         <div className="form-group"><label htmlFor="registration-selfie">Selfie</label><input id="registration-selfie" type="file" accept="image/*" required onChange={updateFile(setSelfieFileName)} /></div>
         <div className="form-group"><label htmlFor="registration-phonepe">PhonePe Number</label><input id="registration-phonepe" type="tel" required value={form.phonePe} onChange={(event) => updateField("phonePe", event.target.value)} /></div>
+        <div className="form-group"><label htmlFor="registration-user-type">User Type</label><select id="registration-user-type" value={userType} onChange={(event) => setUserType(event.target.value as TeamUserType)}><option value="Team Leader">Team Leader</option><option value="Member">Member</option></select></div>
         <div className="form-group full"><label>Preferred Team Roles</label><div className="role-checkbox-grid">{TEAM_MEMBER_ROLES.map((role) => <label className="check-item" key={role}><input type="checkbox" checked={preferredRoles.includes(role)} onChange={() => setPreferredRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role])} />{role}</label>)}</div></div>
       </div>
       {error ? <div className="error-box">{error}</div> : null}
