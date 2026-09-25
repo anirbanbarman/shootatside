@@ -3,6 +3,7 @@
 import { TeamLoginPage } from "@/components/auth/TeamLoginPage";
 import { TeamDashboard } from "@/components/team/TeamDashboard";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { PortalShell } from "@/components/common/PortalShell";
 
 export default function TeamPage() {
   const { currentUser, isReady } = useProjectContext();
@@ -15,9 +16,5 @@ export default function TeamPage() {
     return <TeamLoginPage />;
   }
 
-  return (
-    <main className="content-panel app-shell-main">
-      <TeamDashboard />
-    </main>
-  );
+  return <PortalShell role="team"><TeamDashboard /></PortalShell>;
 }

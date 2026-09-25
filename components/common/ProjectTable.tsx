@@ -5,9 +5,10 @@ import { formatCurrency, formatDate } from "@/utils/status";
 interface ProjectTableProps {
   projects: Project[];
   onSelect: (projectId: string) => void;
+  selectedProjectId?: string;
 }
 
-export function ProjectTable({ projects, onSelect }: ProjectTableProps) {
+export function ProjectTable({ projects, onSelect, selectedProjectId }: ProjectTableProps) {
   return (
     <div className="table-card">
       <div className="table-wrap">
@@ -25,7 +26,7 @@ export function ProjectTable({ projects, onSelect }: ProjectTableProps) {
           </thead>
           <tbody>
             {projects.map((project) => (
-              <tr key={project.id}>
+              <tr key={project.id} className={project.id === selectedProjectId ? "project-row-selected" : ""}>
                 <td>{project.id}</td>
                 <td>{project.client.name}</td>
                 <td>{project.eventType}</td>

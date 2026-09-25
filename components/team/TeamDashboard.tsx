@@ -5,7 +5,7 @@ import { useState } from "react";
 import { formatDate, getProjectStatus } from "@/utils/status";
 
 export function TeamDashboard() {
-  const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage } = useProjectContext();
+  const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage, logout } = useProjectContext();
   const [delayNotes, setDelayNotes] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
   const confirmedProjects = projects.filter((project) => getProjectStatus(project) === "PROJECT_CONFIRMED");
@@ -17,7 +17,7 @@ export function TeamDashboard() {
           <p className="eyebrow">Team Portal</p>
           <h2>Available Events</h2>
         </div>
-        <span className="pill">{confirmedProjects.length} confirmed events</span>
+        <div className="header-actions"><span className="pill">{confirmedProjects.length} confirmed events</span><button type="button" className="secondary-button" onClick={logout}>Log out</button></div>
       </section>
 
       <div className="panel">

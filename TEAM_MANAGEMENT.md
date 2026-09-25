@@ -1,8 +1,54 @@
 # Team Management Implementation
 
+Last updated: 25 September 2026
+
 ## Overview
 
-The application uses a client-side `ProjectProvider` and browser `localStorage` for the current demo workflow. Team registrations, projects, event interests, event teams, and the current session persist in the browser.
+The application uses a client-side `ProjectProvider` and browser `localStorage` for the current demo workflow. Team registrations, projects, event interests, event teams, client briefing details, tracker data, and the current session persist in the browser.
+
+Main screens:
+
+- `/team`: team login, registration, approved member event portal, and event-day controls.
+- `/admin`: admin login, project management, team management, hierarchy builder, and live tracker.
+- `/client`: client project portal, team call details, and assigned leader contact.
+
+Admin Team Management sections are URL-addressable through the `section` query parameter, so refresh and browser navigation preserve the selected section:
+
+- `/admin?section=registrations`
+- `/admin?section=interests`
+- `/admin?section=hierarchy-builder`
+- `/admin?section=live-tracker`
+
+The admin sidebar also provides an explicit logout action. The team portal has its own logout action.
+
+## Portal Layout and Routing
+
+Authenticated admin, client, and team screens use the shared `PortalShell` component. The shell provides:
+
+- A full-width header with brand, portal title, current user, and logout.
+- A left navigation panel with role-specific links.
+- A central routed content area for the dashboard.
+- A right contextual information panel on wide screens.
+- A full-width footer.
+
+The right panel collapses on smaller screens, and the left navigation becomes a horizontal mobile navigation strip.
+
+The main portals remain separate routes:
+
+- `/admin`
+- `/client`
+- `/team`
+
+Admin Team Management subsections are route-addressable with query parameters so each section can be refreshed or linked directly:
+
+- `/admin?section=registrations`
+- `/admin?section=interests`
+- `/admin?section=hierarchy-builder`
+- `/admin?section=live-tracker`
+
+## Session Switching
+
+Admin, client, and team active sessions are stored in per-tab `sessionStorage`, while shared project and team data remains in `localStorage`. An admin tab and a team tab can therefore stay logged in independently; logging in as team no longer logs the admin out in another tab. Route guards still verify the required role before rendering each portal.
 
 ## Team Registration
 
@@ -18,6 +64,8 @@ The `/team` route shows the team login screen until an approved team account log
 - PhonePe number
 - User Type: `Team Leader` or `Member`
 - One or more preferred team roles
+
+The User Type is the hierarchy identity. Preferred roles are event duties and may contain roles such as `Cinematographer`, `Drone operator`, or `Team Leader`.
 
 The available preferred roles are:
 
@@ -48,6 +96,8 @@ For each registration, admin can:
 - Set a username and password
 - Reject the registration
 
+After acceptance, the team member can log in only with the username and password assigned by admin. Pending and rejected registrations cannot access events.
+
 Only accepted registrations with matching credentials can log in and view events.
 
 ## Event Interest Requests
@@ -76,7 +126,9 @@ The builder supports two explicit member types:
 
 - Added with **Add Interested Member**.
 - Selected from interested members for that event.
-- Name and phone are populated from registration and disabled.
+- User Type is populated from registration but remains an editable dropdown for admin.
+- The interested-member selector populates name and phone from registration.
+- Populated name and phone are disabled for interested rows.
 - Role dropdown contains only roles selected during registration.
 
 ### Custom Member
@@ -84,9 +136,10 @@ The builder supports two explicit member types:
 - Added with **Add Team Member**.
 - Name is an editable input.
 - Phone number is an editable input.
+- User Type is an editable dropdown containing `Team Leader` and `Member`.
 - Role dropdown contains the complete role list.
 
-Both member types can be mixed in one event team. Each row can be removed, and **Save Team** persists the event roster.
+Both member types can be mixed in one event team. The **Add Interested Member** button disappears after all interested members for the event have been selected. Each row can be removed, and **Save Team** persists the event roster.
 
 ## Event Team Graph
 
@@ -95,9 +148,11 @@ After an event team is saved, its hierarchy graph appears directly below that ev
 The graph displays:
 
 1. Event root with event type, date, and client
-2. Team Leader nodes below the event
-3. Other team members below the leader level
-4. Each person’s name, phone number, and assigned role
+2. `Team Leader` user-type nodes below the event
+3. `Member` user-type nodes below the leader level
+4. Each person’s name, phone number, user type, and assigned role
+
+The graph hierarchy is based on `EventTeamMember.userType`, not on the selected event duty role. Older saved event teams without `userType` fall back to the old `Team Leader` role value.
 
 The graph is event-specific, so each event card shows only its own assigned team.
 
@@ -113,11 +168,18 @@ Team portal event access is role-aware and time-limited. The event team assignme
 
 ## Client Team Call Details
 
-After the admin creates an event team, the client can set a team call time and call venue from the client project details. The saved values are visible to admin and assigned team members. Team members see them within the existing seven-day event visibility window. The client sees the assigned Team Leader name and phone within that same window.
+After the admin creates an event team, the client can set a team call time and call venue from the client project details. The client form is available only after a team exists.
+
+- Admin can see the saved call time and call venue in project details.
+- Assigned team members can see the saved call details within the seven-day event window.
+- The client sees the assigned Team Leader name and phone within the same seven-day window.
+- The values are stored in `Project.teamBrief`.
 
 ## Event-Day Live Tracker
 
 Admin can open **Team Management > Live Event Tracker** for events with a saved team.
+
+The tracker shows only events whose event date is today by default. **Show All Trackers** reveals other event dates in read-only mode.
 
 - Admin can add checklist tasks for the event.
 - Admin can see the Team Leader arrival timestamp.
@@ -125,6 +187,8 @@ Admin can open **Team Management > Live Event Tracker** for events with a saved 
 - Admin can mark checklist tasks complete; completion timestamps are stored.
 - Admin can review delay or issue notes from the Team Leader.
 - Admin and Team Leader can exchange messages in the event tracker chat.
+
+When all trackers are shown, inputs and action controls are disabled for non-today events. This prevents future or historical events from being edited accidentally.
 
 On the event date, the assigned Team Leader can:
 
@@ -135,6 +199,8 @@ On the event date, the assigned Team Leader can:
 - Send messages to the admin.
 
 Each assigned member can also check in individually from their own team portal. The same `memberJoinedAt` timestamp is stored whether the member checks in personally or the Team Leader checks them in, so admin sees the source-independent attendance state and time.
+
+The member check-in is stored using the assigned event-team email, which keeps the team portal and admin dashboard synchronized.
 
 All tracker state is stored on the project in `eventTracker` and persists through browser `localStorage` in the current demo implementation.
 
@@ -148,7 +214,26 @@ Important fields include:
 - `EventTeamMember.member`
 - `EventTeamMember.memberPhone`
 - `EventTeamMember.role`
+- `EventTeamMember.userType`
 - `EventTeamMember.date`
+- `Project.teamBrief`
+- `Project.eventTracker`
+- `EventTracker.memberJoinedAt`
+- `EventTracker.tasks[].completedAt`
+- `EventTracker.messages[]`
+
+## Important Business Rules
+
+- Only accepted registrations can log in.
+- Multiple members can request the same event.
+- A member cannot have multiple pending or accepted event requests on the same date.
+- Admin accepts or rejects interest requests independently per member.
+- Event hierarchy can contain both interested and custom members.
+- Interested members use their registration role preferences; custom members use the complete role list.
+- User Type controls hierarchy and portal visibility. Event role controls the person’s duty.
+- Sensitive team details unlock from seven days before the event through the event date.
+- Team Leaders see client name, client address, client phone, and assigned members.
+- Members see only Team Leader name and Team Leader phone; they do not see client details.
 
 ## Validation
 

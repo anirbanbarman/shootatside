@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Photography Quote Manager",
-  description: "Photography admin and client quotation workflow demo.",
+  title: "Studio Shoot at Sight",
+  description: "Studio Shoot at Sight photography workspace.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

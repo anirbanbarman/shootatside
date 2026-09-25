@@ -16,7 +16,7 @@ export function Navbar() {
   return (
     <header className={`landing-nav ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-inner">
-        <div className="brand">ShotAtSide</div>
+        <div className="brand">Studio Shoot at Sight</div>
 
         <nav className={`nav-links ${open ? "open" : ""}`} aria-label="Main">
           <a href="#home">Home</a>

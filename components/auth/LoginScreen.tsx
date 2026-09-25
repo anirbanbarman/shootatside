@@ -57,7 +57,7 @@ export function LoginScreen() {
   return (
     <div className="login-shell">
       <header className="login-header">
-        <div className="login-brand">📷 Ani Photography</div>
+        <div className="login-brand">📷 Studio Shoot at Sight</div>
         <div className="login-switcher">
           <button type="button" className={mode === "admin" ? "login-tab active" : "login-tab"} onClick={() => setMode("admin")}>
             Admin Panel

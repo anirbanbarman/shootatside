@@ -7,7 +7,7 @@ export function LoginLanding() {
     <div className="landing-shell">
       <div className="landing-header">
         <div className="landing-logo">📷</div>
-        <h1>Ani Photography</h1>
+        <h1>Studio Shoot at Sight</h1>
         <p>Quote & Negotiation Platform</p>
       </div>
 

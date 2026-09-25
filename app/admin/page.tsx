@@ -3,6 +3,7 @@
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { AdminLoginPage } from "@/components/auth/AdminLoginPage";
+import { PortalShell } from "@/components/common/PortalShell";
 
 export default function AdminPage() {
   const { currentUser, isReady } = useProjectContext();
@@ -15,9 +16,5 @@ export default function AdminPage() {
     return <AdminLoginPage />;
   }
 
-  return (
-    <main className="content-panel app-shell-main">
-      <AdminDashboard />
-    </main>
-  );
+  return <PortalShell role="admin"><AdminDashboard /></PortalShell>;
 }

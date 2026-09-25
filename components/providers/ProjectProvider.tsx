@@ -119,6 +119,32 @@ function writeStoredValue<T>(key: string, value: T | null | undefined) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+function readSessionValue<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const storedValue = window.sessionStorage.getItem(key);
+    return storedValue ? (JSON.parse(storedValue) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeSessionValue<T>(key: string, value: T | null | undefined) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (value === null || value === undefined) {
+    window.sessionStorage.removeItem(key);
+    return;
+  }
+
+  window.sessionStorage.setItem(key, JSON.stringify(value));
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<ViewMode>("admin");
   const [activeRole, setActiveRole] = useState<ViewMode | "guest">("admin");
@@ -134,8 +160,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const storedRoleState = readStoredValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, DEFAULT_ROLE_STATE);
-    const storedUser = readStoredValue<SessionUser | null>(STORAGE_KEYS.user, null);
+    const storedRoleState = readSessionValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, DEFAULT_ROLE_STATE);
+    const storedUser = readSessionValue<SessionUser | null>(STORAGE_KEYS.user, null);
     const normalizedUser = storedUser
       ? {
           name: storedUser.name ?? "",
@@ -180,7 +206,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.user || event.key === STORAGE_KEYS.roleState || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || !event.key) {
+      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || !event.key) {
         syncFromStorage();
       }
     };
@@ -204,12 +230,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     if (currentUser) {
-      writeStoredValue(STORAGE_KEYS.user, currentUser);
+      writeSessionValue(STORAGE_KEYS.user, currentUser);
     } else {
-      window.localStorage.removeItem(STORAGE_KEYS.user);
+      window.sessionStorage.removeItem(STORAGE_KEYS.user);
     }
 
-    writeStoredValue(STORAGE_KEYS.roleState, { view, activeRole });
+    writeSessionValue(STORAGE_KEYS.roleState, { view, activeRole });
   }, [activeRole, currentUser, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
 
   const isLoggedIn = Boolean(currentUser);

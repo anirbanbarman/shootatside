@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
 import { ProjectTable } from "@/components/common/ProjectTable";
@@ -18,7 +19,7 @@ function LiveTrackerPanel() {
   const today = new Date().toISOString().slice(0, 10);
     const visibleTrackers = projects.filter((project) => project.eventTeam?.length && (showAllTrackers || project.eventDate === today));
 
-  return <div className="panel"><div className="panel-header"><div><h3>Live Event Tracker</h3><p className="form-note">Showing {showAllTrackers ? "all event trackers" : "today's event trackers"}.</p></div><button type="button" className="secondary-button" onClick={() => setShowAllTrackers((current) => !current)}>{showAllTrackers ? "Show Today Only" : "Show All Trackers"}</button></div><div className="live-tracker-list">{visibleTrackers.map((project) => { const isToday = project.eventDate === today; const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }; const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader"); return <article className="live-tracker-card" key={project.id}><div className="panel-header"><div><p className="eyebrow">{project.id}</p><h3>{project.eventType} · {formatDate(project.eventDate)}</h3><p>{project.client.name} · {project.venue}</p></div><span className="pill">{isToday ? (tracker.leaderArrivedAt ? `Leader reached ${new Date(tracker.leaderArrivedAt).toLocaleTimeString()}` : "Leader not reached") : "Read only"}</span></div><div className="tracker-members"><strong>Member attendance</strong>{project.eventTeam?.map((member) => <span className="pill" key={member.memberEmail}>{member.member} · {tracker.memberJoinedAt[member.memberEmail] ? `Joined ${new Date(tracker.memberJoinedAt[member.memberEmail]).toLocaleTimeString()}` : "Not joined"}</span>)}</div><div className="tracker-tasks"><strong>Event checklist</strong>{tracker.tasks.map((task) => <label className="check-item" key={task.id}><input type="checkbox" disabled={!isToday} checked={task.completed} onChange={() => toggleEventTrackerTask(project.id, task.id)} />{task.label}{task.completedAt ? ` · ${new Date(task.completedAt).toLocaleTimeString()}` : ""}</label>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Add event task" value={taskText[project.id] ?? ""} onChange={(event) => setTaskText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (taskText[project.id]?.trim()) { addEventTrackerTask(project.id, taskText[project.id].trim()); setTaskText((current) => ({ ...current, [project.id]: "" })); } }}>Add Task</button></div></div>{tracker.delayNote ? <div className="warning-box"><strong>Delay / Issue:</strong> {tracker.delayNote}</div> : null}<div className="tracker-chat"><strong>Chat with {leader?.member ?? "Team Leader"}</strong>{tracker.messages.map((message) => <p key={message.id}><b>{message.sender}</b> · {message.message}</p>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Message team leader" value={chatText[project.id] ?? ""} onChange={(event) => setChatText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (chatText[project.id]?.trim()) { sendEventTrackerMessage(project.id, chatText[project.id].trim(), "admin"); setChatText((current) => ({ ...current, [project.id]: "" })); } }}>Send</button></div></div></article>; })}</div></div>;
+  return <div className="panel"><div className="panel-header"><div><h3>Live Event Tracker</h3><p className="form-note">Showing {showAllTrackers ? "all event trackers" : "today's event trackers"}.</p></div><button type="button" className="secondary-button" onClick={() => setShowAllTrackers((current) => !current)}>{showAllTrackers ? "Show Today Only" : "Show All Trackers"}</button></div>{visibleTrackers.length === 0 ? <div className="empty-state"><strong>{showAllTrackers ? "No event teams have been created yet." : "No team tracker is scheduled for today."}</strong><p>{showAllTrackers ? "Create an event team from Team Hierarchy to start tracking it." : "Only events dated today appear here. Use Show All Trackers to review other event dates."}</p></div> : <div className="live-tracker-list">{visibleTrackers.map((project) => { const isToday = project.eventDate === today; const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }; const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader"); return <article className="live-tracker-card" key={project.id}><div className="panel-header"><div><p className="eyebrow">{project.id}</p><h3>{project.eventType} · {formatDate(project.eventDate)}</h3><p>{project.client.name} · {project.venue}</p></div><span className="pill">{isToday ? (tracker.leaderArrivedAt ? `Leader reached ${new Date(tracker.leaderArrivedAt).toLocaleTimeString()}` : "Leader not reached") : "Read only"}</span></div><div className="tracker-members"><strong>Member attendance</strong>{project.eventTeam?.map((member) => <span className="pill" key={member.memberEmail}>{member.member} · {tracker.memberJoinedAt[member.memberEmail] ? `Joined ${new Date(tracker.memberJoinedAt[member.memberEmail]).toLocaleTimeString()}` : "Not joined"}</span>)}</div><div className="tracker-tasks"><strong>Event checklist</strong>{tracker.tasks.map((task) => <label className="check-item" key={task.id}><input type="checkbox" disabled={!isToday} checked={task.completed} onChange={() => toggleEventTrackerTask(project.id, task.id)} />{task.label}{task.completedAt ? ` · ${new Date(task.completedAt).toLocaleTimeString()}` : ""}</label>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Add event task" value={taskText[project.id] ?? ""} onChange={(event) => setTaskText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (taskText[project.id]?.trim()) { addEventTrackerTask(project.id, taskText[project.id].trim()); setTaskText((current) => ({ ...current, [project.id]: "" })); } }}>Add Task</button></div></div>{tracker.delayNote ? <div className="warning-box"><strong>Delay / Issue:</strong> {tracker.delayNote}</div> : null}<div className="tracker-chat"><strong>Chat with {leader?.member ?? "Team Leader"}</strong>{tracker.messages.map((message) => <p key={message.id}><b>{message.sender}</b> · {message.message}</p>)}<div className="tracker-add-task"><input disabled={!isToday} placeholder="Message team leader" value={chatText[project.id] ?? ""} onChange={(event) => setChatText((current) => ({ ...current, [project.id]: event.target.value }))} /><button disabled={!isToday} type="button" className="secondary-button" onClick={() => { if (chatText[project.id]?.trim()) { sendEventTrackerMessage(project.id, chatText[project.id].trim(), "admin"); setChatText((current) => ({ ...current, [project.id]: "" })); } }}>Send</button></div></div></article>; })}</div>}</div>;
 }
 
 function TeamHierarchyBuilder() {
@@ -62,9 +63,12 @@ function TeamHierarchyBuilder() {
 }
 
 function TeamManagementPanel() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
-  const [activeSubsection, setActiveSubsection] = useState<"registrations" | "interests" | "hierarchy" | "hierarchy-builder" | "live-tracker">("registrations");
+  const activeSubsection = (searchParams.get("section") as "registrations" | "interests" | "hierarchy" | "hierarchy-builder" | "live-tracker" | null) ?? "registrations";
+  const setActiveSubsection = (section: "registrations" | "interests" | "hierarchy-builder" | "live-tracker") => router.replace(`/admin?section=${section}`);
   const [interestDate, setInterestDate] = useState("");
   const [hierarchyDate, setHierarchyDate] = useState("");
   const [openTeamEventId, setOpenTeamEventId] = useState<string | null>(null);
@@ -196,7 +200,8 @@ function TeamManagementPanel() {
 }
 
 export function AdminDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, resetDemoProjects, seedDemoProject } = useProjectContext();
+  const searchParams = useSearchParams();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
@@ -208,7 +213,8 @@ export function AdminDashboard() {
   const [negotiationError, setNegotiationError] = useState("");
   const [negotiationSuccess, setNegotiationSuccess] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<"dashboard" | "team-management">("dashboard");
+  const [projectFilter, setProjectFilter] = useState("");
+  const isTeamManagement = Boolean(searchParams.get("section"));
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? projects[0],
@@ -225,6 +231,11 @@ export function AdminDashboard() {
     activeBookings: projects.filter((project) => project.initialQuote && !project.negotiationResponse && !project.clientResponse).length,
     pendingWorkflows: projects.filter((project) => !project.initialQuote || project.clientResponse?.type === "REJECTED").length,
   };
+
+  const filteredProjects = projects.filter((project) => {
+    const query = projectFilter.trim().toLowerCase();
+    return !query || [project.id, project.client.name, project.eventType, project.venue].some((value) => value.toLowerCase().includes(query));
+  });
 
   const handleSendQuote = () => {
     const amount = Number(quoteAmount);
@@ -287,20 +298,8 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="admin-portal-layout">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-title">Admin Portal</div>
-        <button type="button" className={activeSection === "dashboard" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSection("dashboard")}>
-          Dashboard
-        </button>
-        <button type="button" className={activeSection === "team-management" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSection("team-management")}>
-          Team Management
-        </button>
-        {activeSection === "team-management" ? <div className="admin-sidebar-submenu"><span>Team Registration</span><span>Interest Requests</span><span>Team Hierarchy</span></div> : null}
-      </aside>
-
-      <main className="admin-portal-main">
-      {activeSection === "team-management" ? <TeamManagementPanel /> : <div className="dashboard-shell">
+    <div className="admin-dashboard-content">
+      {isTeamManagement ? <TeamManagementPanel /> : <div className="dashboard-shell">
       <section className="page-intro">
         <div>
           <p className="eyebrow">Photography Admin</p>
@@ -327,28 +326,16 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <div className="demo-controls card">
-        <div className="demo-controls-header">
-          <h3>Play with Demo Data</h3>
-        </div>
-        <div className="demo-actions">
-          <button type="button" className="demo-button" onClick={() => seedDemoProject("pending")}>Pending</button>
-          <button type="button" className="demo-button" onClick={() => seedDemoProject("quote")}>Quote Sent</button>
-          <button type="button" className="demo-button" onClick={() => seedDemoProject("negotiation")}>Negotiation</button>
-          <button type="button" className="demo-button" onClick={() => seedDemoProject("confirmed")}>Confirmed</button>
-          <button type="button" className="demo-button secondary" onClick={resetDemoProjects}>Reset</button>
-        </div>
-      </div>
-
       <div className="dashboard-grid">
         <div className="panel panel-wide">
           <div className="panel-header space-between">
-            <h3>Project List</h3>
+            <div><h3>Project List</h3><p className="form-note">{filteredProjects.length} of {projects.length} projects</p></div>
+            <input className="project-filter-input" aria-label="Filter projects" placeholder="Filter projects" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} />
           </div>
-          <ProjectTable projects={projects} onSelect={setSelectedProjectId} />
+          <ProjectTable projects={filteredProjects} onSelect={setSelectedProjectId} selectedProjectId={selectedProjectId} />
         </div>
 
-        <div className="panel panel-detail">
+        <div className="panel panel-detail selected-project-panel">
           <div className="panel-header space-between">
             <h3>Project Details</h3>
             <div className="detail-actions">
@@ -462,7 +449,6 @@ export function AdminDashboard() {
       </div>
 
       </div>}
-      </main>
       <Modal title="Project Timeline" open={isTimelineOpen} onClose={() => setTimelineOpen(false)}>
         <ProjectTimeline project={selectedProject} />
       </Modal>

@@ -3,6 +3,7 @@
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { ClientLoginPage } from "@/components/auth/ClientLoginPage";
+import { PortalShell } from "@/components/common/PortalShell";
 
 export default function ClientPage() {
   const { currentUser, isReady } = useProjectContext();
@@ -15,9 +16,5 @@ export default function ClientPage() {
     return <ClientLoginPage />;
   }
 
-  return (
-    <main className="content-panel app-shell-main">
-      <ClientDashboard />
-    </main>
-  );
+  return <PortalShell role="client"><ClientDashboard /></PortalShell>;
 }

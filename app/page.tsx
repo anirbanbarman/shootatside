@@ -76,8 +76,8 @@ export default function Home() {
       </section>
 
       <footer className="landing-footer">
-        <div className="brand">ShotAtSide</div>
-        <p>© 2026 ShotAtSide Photography Studio</p>
+        <div className="brand">Studio Shoot at Sight</div>
+        <p>© 2026 Studio Shoot at Sight</p>
       </footer>
     </div>
   );
