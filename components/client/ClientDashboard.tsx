@@ -7,8 +7,10 @@ import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ClientRequestForm } from "@/components/client/ClientRequestForm";
+import { EditingChat } from "@/components/common/EditingChat";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatCurrency, formatDate } from "@/utils/status";
+import { getEditingMilestones, getEditingProgress } from "@/utils/notifications";
 
 export function ClientDashboard() {
   const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief } = useProjectContext();
@@ -22,6 +24,7 @@ export function ClientDashboard() {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
+  const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [teamBrief, setTeamBrief] = useState({ callTime: "", callVenue: "" });
 
   const clientProjects = useMemo(() => projects.filter((project) => project.client.email.includes("@") && project.client.phone), [projects]);
@@ -47,6 +50,11 @@ export function ClientDashboard() {
   const handleTeamBriefSubmit = () => {
     if (!teamBrief.callTime.trim() || !teamBrief.callVenue.trim()) return;
     updateClientTeamBrief(selectedProject.id, teamBrief);
+  };
+
+  const handleProjectSelect = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setProjectDetailsOpen(true);
   };
 
   const handleAcceptQuote = () => {
@@ -106,17 +114,19 @@ export function ClientDashboard() {
         </div>
       </section>
 
-      <div className="dashboard-grid client-grid">
+      <div className="client-project-list">
         <div className="panel panel-wide">
           <div className="panel-header space-between">
             <h3>My Requests</h3>
           </div>
-          <ProjectTable projects={clientProjects} onSelect={setSelectedProjectId} />
+          <ProjectTable projects={clientProjects} onSelect={handleProjectSelect} selectedProjectId={selectedProjectId} />
         </div>
+      </div>
 
-        <div className="panel panel-detail">
+      <Modal title={`Project Details · ${selectedProject.client.name} · ${selectedProject.eventType}`} open={isProjectDetailsOpen} onClose={() => setProjectDetailsOpen(false)} className="project-details-modal">
+        <div className="client-project-modal-content">
           <div className="panel-header space-between">
-            <h3>Project Details</h3>
+            <h3>Overview &amp; Status</h3>
             <div className="detail-actions">
               <button type="button" className="icon-button-inline" onClick={() => setTimelineOpen(true)} title="Open timeline">
                 ⏱
@@ -132,11 +142,28 @@ export function ClientDashboard() {
                 <div><label>Event Type</label><p>{selectedProject.eventType}</p></div>
                 <div><label>Event Date</label><p>{formatDate(selectedProject.eventDate)}</p></div>
                 <div><label>Venue</label><p>{selectedProject.venue}</p></div>
-                <div><label>Guest Count</label><p>{selectedProject.guestCount}</p></div>
                 <div><label>Status</label><div className="status-inline"><StatusBadge project={selectedProject} /></div></div>
                 <div className="full-width"><label>Requirements</label><p>{selectedProject.requirements}</p></div>
               </div>
             </div>
+
+            {selectedProject.eventTeam?.length ? <div className="section-block">
+              <p className="eyebrow">Event Checklist &amp; Updates</p>
+              {selectedProject.eventTracker?.tasks.length ? <div className="tracker-tasks">{selectedProject.eventTracker.tasks.map((task) => <div className={`check-item ${task.completed ? "tracker-task-complete" : ""}`} key={task.id}><span aria-hidden="true">{task.completed ? "✓" : "○"}</span><span>{task.label}</span><strong>{task.completed ? "Completed" : "Pending"}</strong>{task.completedAt ? <small>{new Date(task.completedAt).toLocaleString()}</small> : null}</div>)}</div> : <p className="form-note">The event checklist has not been added yet.</p>}
+              {selectedProject.eventTracker?.delayNote ? <div className="warning-box"><strong>Reported delay / issue:</strong> {selectedProject.eventTracker.delayNote}</div> : <p className="form-note">No delay or issue has been reported.</p>}
+            </div> : null}
+
+            {selectedProject.eventTracker?.eventCompletedAt ? <div className="section-block client-editing-notification">
+              <p className="eyebrow">Production Notifications</p>
+              <div className="success-box">Event Completed · {new Date(selectedProject.eventTracker.eventCompletedAt).toLocaleString()}</div>
+              {selectedProject.editingWorkflow ? <>
+                {selectedProject.editingWorkflow.adminTimeline ? <div className="editor-timeline"><strong>Editing timeline</strong><p>{selectedProject.editingWorkflow.adminTimeline}</p>{selectedProject.editingWorkflow.timelineDueDate ? <span>Target delivery: {formatDate(selectedProject.editingWorkflow.timelineDueDate)}</span> : null}</div> : <p className="form-note">The editing timeline will appear here when the editor is assigned and admin instructions are ready.</p>}
+                {selectedProject.editingWorkflow.assignedEditorEmail ? <div className="editor-progress-head"><strong>Editing progress</strong><b>{getEditingProgress(selectedProject.editingWorkflow)}%</b></div> : <p className="form-note">The studio is arranging an editor for your completed event.</p>}
+                {selectedProject.editingWorkflow.assignedEditorEmail ? <><div className="editor-progress-track" role="progressbar" aria-label="Editing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={getEditingProgress(selectedProject.editingWorkflow)}><span style={{ width: `${getEditingProgress(selectedProject.editingWorkflow)}%` }} /></div><div className="editor-stage-list">{getEditingMilestones(selectedProject.editingWorkflow).map((milestone) => <div className={`editor-stage-row ${milestone.status === "COMPLETED" ? "editor-stage-done" : ""}`} key={milestone.id}><span className="editor-stage-status-icon" aria-hidden="true">{milestone.status === "COMPLETED" ? "✓" : "○"}</span><span>{milestone.label}</span><strong>{milestone.status === "COMPLETED" ? "Completed" : "Not completed"}</strong></div>)}</div></> : null}
+                {selectedProject.editingWorkflow.deliveredAt && selectedProject.editingWorkflow.finalDriveUrl ? <div className="success-box">Your edited files are ready · <a href={selectedProject.editingWorkflow.finalDriveUrl} target="_blank" rel="noreferrer">Open delivery folder ↗</a></div> : null}
+                <EditingChat projectId={selectedProject.id} />
+              </> : <p className="form-note">Your event is complete. Post-production updates will appear here.</p>}
+            </div> : null}
 
             {selectedProject.eventTeam?.length ? <div className="section-block">
               <p className="eyebrow">Team Call Details</p>
@@ -232,8 +259,7 @@ export function ClientDashboard() {
             {error ? <div className="error-box">{error}</div> : null}
           </div>
         </div>
-
-      </div>
+      </Modal>
 
       <div className="form-panel-spacer" />
 

@@ -15,7 +15,6 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
     eventType: "Wedding",
     eventDate: "2026-12-25",
     venue: "Kolkata",
-    guestCount: 250,
     requirements: "Looking for complete wedding photography and cinematography package.",
     eventSide: "Single Side",
     budget: "₹10,000 - ₹15,000",
@@ -50,12 +49,6 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       return;
     }
 
-    if (Number(form.guestCount) <= 0) {
-      setError("Guest count must be greater than 0.");
-      setSuccess("");
-      return;
-    }
-
     const requirementText = [
       `Event date: ${form.eventDate}`,
       `Event side: ${form.eventSide}`,
@@ -73,7 +66,6 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       eventType: form.eventType.trim(),
       eventDate: form.eventDate,
       venue: form.venue.trim(),
-      guestCount: Number(form.guestCount),
       requirements: requirementText,
     });
 
@@ -86,7 +78,6 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       eventType: "Wedding",
       eventDate: "",
       venue: "",
-      guestCount: 0,
       requirements: "",
       eventSide: "Single Side",
       budget: "₹10,000 - ₹15,000",

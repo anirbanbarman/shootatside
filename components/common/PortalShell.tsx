@@ -5,23 +5,28 @@ import type { ReactNode } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
-type PortalRole = "admin" | "client" | "team";
+type PortalRole = "admin" | "client" | "team" | "editor";
 
-const portalCopy: Record<PortalRole, { label: string; title: string; links: { href: string; label: string }[] }> = {
+const portalCopy: Record<PortalRole, { label: string; title: string; links: { href: string; label: string; icon: string }[] }> = {
   admin: {
     label: "Studio control",
     title: "Admin Portal",
-    links: [{ href: "/admin", label: "Dashboard" }, { href: "/admin?section=registrations", label: "Team Management" }],
+    links: [{ href: "/admin", label: "Dashboard", icon: "⌂" }, { href: "/admin?section=registrations", label: "Team Management", icon: "♙" }, { href: "/admin?section=editing", label: "Editor Management", icon: "✂" }],
   },
   client: {
     label: "Your production desk",
     title: "Client Portal",
-    links: [{ href: "/client", label: "My Projects" }, { href: "/client#requests", label: "New Request" }],
+    links: [{ href: "/client", label: "My Projects", icon: "▦" }, { href: "/client#requests", label: "New Request", icon: "+" }],
   },
   team: {
     label: "Field operations",
     title: "Team Portal",
-    links: [{ href: "/team", label: "Available Events" }, { href: "/team#tracker", label: "Event Tracker" }],
+    links: [{ href: "/team", label: "Available Events", icon: "◈" }, { href: "/team#tracker", label: "Event Tracker", icon: "◷" }],
+  },
+  editor: {
+    label: "Post-production studio",
+    title: "Editor Dashboard",
+    links: [{ href: "/editor", label: "Editing Jobs", icon: "✂" }],
   },
 };
 
@@ -34,23 +39,23 @@ export function PortalShell({ role, children }: { role: PortalRole; children: Re
       <header className="portal-header">
         <Link href="/" className="portal-brand"><span className="portal-brand-mark">S</span><span>Studio Shoot at Sight</span></Link>
         <div className="portal-header-context"><span>{copy.label}</span><strong>{copy.title}</strong></div>
-        <div className="portal-user"><span>{currentUser?.name ?? "Guest"}</span><button type="button" className="portal-logout" onClick={logout}>Log out</button></div>
+        <div className="portal-user"><span>{currentUser?.name ?? "Account"}</span><button type="button" className="portal-logout" onClick={logout}><span aria-hidden="true">↪</span> Log out</button></div>
       </header>
 
       <aside className="portal-sidebar">
         <div className="portal-sidebar-label">Workspace</div>
         <nav aria-label={`${copy.title} navigation`} className="portal-nav">
-          {copy.links.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
+          {copy.links.map((link) => <Link href={link.href} key={link.href}><span className="portal-nav-icon" aria-hidden="true">{link.icon}</span><span>{link.label}</span></Link>)}
         </nav>
         <div className="portal-sidebar-note"><span>Studio Shoot at Sight</span><p>One calm place for every production detail.</p></div>
       </aside>
 
       <main className="portal-main">{children}</main>
 
-      {role === "admin" ? null : <aside className="portal-aside">
-        <div className="portal-aside-kicker">{role === "client" ? "Project pulse" : "On the ground"}</div>
-        <h2>{role === "client" ? "Your story, in focus." : "Move with the day."}</h2>
-        <p>{role === "client" ? "Quotes, bookings, call details, and your assigned lead live here." : "Your event details and team check-ins are organized around the shoot date."}</p>
+      {role === "admin" || role === "team" || role === "client" ? null : <aside className="portal-aside">
+        <div className="portal-aside-kicker">Post-production</div>
+        <h2>Shape the final story.</h2>
+        <p>Download source files, follow the studio timeline, and share delivery progress.</p>
         <div className="portal-aside-rule" />
         <span className="portal-aside-status">System status</span>
         <strong className="portal-aside-live">Local workspace active</strong>

@@ -62,26 +62,27 @@ The `/team` route shows the team login screen until an approved team account log
 - Aadhar file selection
 - Selfie file selection
 - PhonePe number
-- User Type: `Team Leader` or `Member`
 - One or more preferred team roles
 
-The User Type is the hierarchy identity. Preferred roles are event duties and may contain roles such as `Cinematographer`, `Drone operator`, or `Team Leader`.
+The admin assigns each approved registration a User Type (`Team Leader` or `Member`) while building the team for a specific event. `Team Leader` is not a selectable preferred role.
 
-The available preferred roles are:
+Available preferred roles include:
 
-1. Team Leader
-2. Candid Photographer
-3. Group Photo taker
-4. Traditional photo taker
-5. Couple Photo taker
-6. Cinematographer
-7. Reel Maker
-8. Teaser Maker
-9. Halping Hand
-10. Drone operator
-11. Live Video
-12. Sound Operator
-13. Driver
+1. Candid Photographer
+2. Group Photo taker
+3. Traditional photo taker
+4. Couple Photo taker
+5. Cinematographer
+6. Reel Maker
+7. Teaser Maker
+8. Halping Hand
+9. Drone operator
+10. Live Video
+11. Sound Operator
+12. Driver
+13. Video Editor
+14. Still Photo Editor
+15. Album Editor
 
 Files are currently stored as selected filenames only. Real file storage requires a backend or upload service.
 
@@ -208,7 +209,6 @@ All tracker state is stored on the project in `eventTracker` and persists throug
 
 Important fields include:
 
-- `TeamRegistration.preferredRoles`
 - `Project.teamInterest[]`
 - `Project.eventTeam[]`
 - `EventTeamMember.member`
@@ -229,7 +229,7 @@ Important fields include:
 - A member cannot have multiple pending or accepted event requests on the same date.
 - Admin accepts or rejects interest requests independently per member.
 - Event hierarchy can contain both interested and custom members.
-- Interested members use their registration role preferences; custom members use the complete role list.
+- Admin assigns event roles to interested and custom members while building each event team.
 - User Type controls hierarchy and portal visibility. Event role controls the person’s duty.
 - Sensitive team details unlock from seven days before the event through the event date.
 - Team Leaders see client name, client address, client phone, and assigned members.

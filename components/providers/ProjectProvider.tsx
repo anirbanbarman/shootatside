@@ -11,9 +11,10 @@ import {
 } from "react";
 
 import { mockProjects } from "@/data/mockProjects";
-import type { EventTeamMember, EventTracker, EventTrackerTask, Project, TeamInterest, TeamMember, TeamMemberRole, TeamRegistration, ViewMode } from "@/types/project";
+import { EDITING_ROLES, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
+import { getEditingMilestones } from "@/utils/notifications";
 
-type UserRole = "admin" | "client" | "team";
+type UserRole = "admin" | "client" | "team" | "editor";
 
 interface SessionUser {
   name: string;
@@ -34,6 +35,9 @@ interface ProjectContextValue {
   loginAdmin: (user: SessionUser) => void;
   loginClient: (user: SessionUser) => void;
   loginTeam: (username: string, password: string) => boolean;
+  loginEditor: (username: string, password: string) => boolean;
+  editors: EditorAccount[];
+  createEditor: (input: Omit<EditorAccount, "id" | "createdAt">) => boolean;
   registerTeam: (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => void;
   teamRegistrations: TeamRegistration[];
   approveTeamRegistration: (registrationId: string, username: string, password: string) => void;
@@ -51,7 +55,6 @@ interface ProjectContextValue {
     eventType: string;
     eventDate: string;
     venue: string;
-    guestCount: number;
     requirements: string;
   }) => void;
   resetDemoProjects: () => void;
@@ -75,6 +78,13 @@ interface ProjectContextValue {
   toggleEventTrackerTask: (projectId: string, taskId: string) => void;
   updateEventDelay: (projectId: string, delayNote: string) => void;
   sendEventTrackerMessage: (projectId: string, message: string, senderRole: "admin" | "team-leader") => void;
+  markEventCompleted: (projectId: string) => void;
+  assignEditor: (projectId: string, editorEmail: string) => void;
+  updateEditingSetup: (projectId: string, setup: { sourceDriveUrl: string; adminTimeline: string; timelineDueDate: string; milestones: EditingMilestone[] }) => void;
+  sendEditingChatMessage: (projectId: string, message: string) => void;
+  markEditorDownloadComplete: (projectId: string, editorEmail: string) => void;
+  updateEditingMilestone: (projectId: string, editorEmail: string, milestoneId: string, status: "NOT_STARTED" | "COMPLETED") => void;
+  deliverEditedFiles: (projectId: string, editorEmail: string, finalDriveUrl: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
@@ -86,6 +96,7 @@ const STORAGE_KEYS = {
   roleState: "shootatside-role-state",
   teamRegistrations: "shootatside-team-registrations",
   teamMembers: "shootatside-team-members",
+  editors: "shootatside-editors",
 } as const;
 
 const DEFAULT_ROLE_STATE = {
@@ -153,6 +164,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0]?.id ?? "");
   const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [editors, setEditors] = useState<EditorAccount[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   const syncFromStorage = useCallback(() => {
@@ -170,21 +182,60 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           role: storedUser.role ?? (storedRoleState.activeRole === "admin" ? "admin" : storedRoleState.activeRole === "client" ? "client" : "team"),
         }
       : null;
-    const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => ({
-      ...project,
-      teamInterest: project.teamInterest
-        ? Array.isArray(project.teamInterest)
-          ? project.teamInterest
-          : [project.teamInterest as unknown as TeamInterest]
-        : undefined,
-    }));
+    const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => {
+      const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
+      const eventTracker = project.eventTracker;
+      const memberJoinedAt = { ...(eventTracker?.memberJoinedAt ?? {}) };
+
+      if (leader && eventTracker?.leaderArrivedAt && !memberJoinedAt[leader.memberEmail]) {
+        memberJoinedAt[leader.memberEmail] = eventTracker.leaderArrivedAt;
+      }
+
+      return {
+        ...project,
+        eventTracker: eventTracker ? { ...eventTracker, memberJoinedAt } : undefined,
+        teamInterest: project.teamInterest
+          ? Array.isArray(project.teamInterest)
+            ? project.teamInterest
+            : [project.teamInterest as unknown as TeamInterest]
+          : undefined,
+      };
+    });
     const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
     const storedTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
       ...registration,
-      userType: registration.userType ?? "Member",
       preferredRoles: registration.preferredRoles ?? [],
     }));
     const storedTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
+    const storedEditors = readStoredValue<EditorAccount[]>(STORAGE_KEYS.editors, []).map((editor) => ({
+      ...editor,
+      editingRoles: editor.editingRoles ?? [],
+    }));
+    const editorAccountsByEmail = new Map(storedEditors.map((editor) => [editor.email.toLowerCase(), editor]));
+
+    storedTeamRegistrations.forEach((registration) => {
+      const editingRoles = registration.preferredRoles.filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+      if (registration.status !== "ACCEPTED" || editingRoles.length === 0 || !registration.username || !registration.password) return;
+
+      const email = registration.email.trim().toLowerCase();
+      const existingEditor = editorAccountsByEmail.get(email);
+      if (existingEditor) {
+        existingEditor.editingRoles = Array.from(new Set([...existingEditor.editingRoles, ...editingRoles]));
+        return;
+      }
+
+      editorAccountsByEmail.set(email, {
+        id: `EDITOR-${registration.id}`,
+        name: registration.name,
+        email,
+        phone: registration.mobile,
+        username: registration.username,
+        password: registration.password,
+        editingRoles,
+        createdAt: registration.submittedAt,
+      });
+    });
+    const migratedEditors = Array.from(editorAccountsByEmail.values());
 
     setView(storedRoleState.view ?? "admin");
     setActiveRole(storedRoleState.activeRole ?? "admin");
@@ -193,6 +244,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(storedSelectedProject ?? mockProjects[0]?.id ?? "");
     setTeamRegistrations(storedTeamRegistrations);
     setTeamMembers(storedTeamMembers);
+    setEditors(migratedEditors);
     setIsReady(true);
   }, []);
 
@@ -206,7 +258,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || !event.key) {
+      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || event.key === STORAGE_KEYS.editors || !event.key) {
         syncFromStorage();
       }
     };
@@ -223,6 +275,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     writeStoredValue(STORAGE_KEYS.projects, projects);
     writeStoredValue(STORAGE_KEYS.teamRegistrations, teamRegistrations);
     writeStoredValue(STORAGE_KEYS.teamMembers, teamMembers);
+    writeStoredValue(STORAGE_KEYS.editors, editors);
     if (selectedProjectId) {
       writeStoredValue(STORAGE_KEYS.selectedProjectId, selectedProjectId);
     } else {
@@ -236,7 +289,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     writeSessionValue(STORAGE_KEYS.roleState, { view, activeRole });
-  }, [activeRole, currentUser, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
+  }, [activeRole, currentUser, editors, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
 
   const isLoggedIn = Boolean(currentUser);
 
@@ -254,7 +307,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const loginTeam = useCallback((username: string, password: string) => {
     const registration = teamRegistrations.find((item) => item.status === "ACCEPTED" && item.username === username.trim() && item.password === password);
-    if (!registration) {
+    const isEditor = registration?.preferredRoles.some((role) => EDITING_ROLES.includes(role as EditingRole));
+    if (!registration || isEditor) {
       return false;
     }
 
@@ -263,6 +317,26 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setView("team");
     return true;
   }, [teamRegistrations]);
+
+  const loginEditor = useCallback((username: string, password: string) => {
+    const editor = editors.find((item) => item.username === username.trim() && item.password === password);
+    if (!editor) return false;
+    setCurrentUser({ name: editor.name, email: editor.email, phone: editor.phone, role: "editor" });
+    setActiveRole("editor");
+    setView("editor");
+    return true;
+  }, [editors]);
+
+  const createEditor = useCallback((input: Omit<EditorAccount, "id" | "createdAt">) => {
+    const email = input.email.trim().toLowerCase();
+    const username = input.username.trim();
+    if (editors.some((editor) => editor.email.toLowerCase() === email || editor.username.toLowerCase() === username.toLowerCase())) {
+      return false;
+    }
+
+    setEditors((current) => [{ ...input, email: input.email.trim().toLowerCase(), id: `EDITOR-${Date.now()}`, createdAt: new Date().toISOString() }, ...current]);
+    return true;
+  }, [editors]);
 
   const registerTeam = useCallback((input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => {
     setTeamRegistrations((current) => [
@@ -277,10 +351,39 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const approveTeamRegistration = useCallback((registrationId: string, username: string, password: string) => {
-    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId
-      ? { ...registration, username, password, status: "ACCEPTED" }
-      : registration));
-  }, []);
+    const registration = teamRegistrations.find((item) => item.id === registrationId);
+    if (!registration) return;
+
+    const editingRoles = registration.preferredRoles.filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+
+    setTeamRegistrations((current) => current.map((item) => item.id === registrationId
+      ? { ...item, username, password, status: "ACCEPTED" }
+      : item));
+
+    if (editingRoles.length > 0) {
+      setEditors((current) => {
+        const existingEditor = current.find((editor) => editor.email.toLowerCase() === registration.email.toLowerCase());
+        if (existingEditor) {
+          return current.map((editor) => editor.id === existingEditor.id
+            ? { ...editor, editingRoles: Array.from(new Set([...(editor.editingRoles ?? []), ...editingRoles])) }
+            : editor);
+        }
+
+        const editorAccount: EditorAccount = {
+          id: `EDITOR-${Date.now()}`,
+          name: registration.name,
+          email: registration.email.trim().toLowerCase(),
+          phone: registration.mobile,
+          username: username.trim(),
+          password,
+          editingRoles,
+          createdAt: new Date().toISOString(),
+        };
+
+        return [editorAccount, ...current];
+      });
+    }
+  }, [teamRegistrations]);
 
   const rejectTeamRegistration = useCallback((registrationId: string) => {
     setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId
@@ -306,7 +409,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       eventType: string;
       eventDate: string;
       venue: string;
-      guestCount: number;
       requirements: string;
     }) => {
       const generatedProject: Project = {
@@ -320,7 +422,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         eventType: input.eventType,
         eventDate: input.eventDate,
         venue: input.venue,
-        guestCount: input.guestCount,
         requirements: input.requirements,
       };
 
@@ -353,7 +454,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       eventType: "Wedding",
       eventDate: new Date(today.getTime() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10),
       venue: "Demo Venue, Kolkata",
-      guestCount: 160,
       requirements: "Sample demo workflow for testing the client-admin lifecycle.",
     };
 
@@ -653,10 +753,114 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
   const addEventTrackerTask = useCallback((projectId: string, label: string) => updateTracker(projectId, (tracker) => ({ ...tracker, tasks: [...tracker.tasks, { id: `TASK-${Date.now()}`, label, completed: false }] })), [updateTracker]);
   const toggleEventTrackerMember = useCallback((projectId: string, memberEmail: string) => updateTracker(projectId, (tracker) => { const joined = tracker.memberJoinedAt[memberEmail]; const memberJoinedAt = { ...tracker.memberJoinedAt }; if (joined) delete memberJoinedAt[memberEmail]; else memberJoinedAt[memberEmail] = new Date().toISOString(); return { ...tracker, memberJoinedAt }; }), [updateTracker]);
-  const markLeaderArrived = useCallback((projectId: string) => updateTracker(projectId, (tracker) => ({ ...tracker, leaderArrivedAt: tracker.leaderArrivedAt ? undefined : new Date().toISOString() })), [updateTracker]);
+  const markLeaderArrived = useCallback((projectId: string) => {
+    if (!currentUser?.email) return;
+
+    updateTracker(projectId, (tracker) => {
+      const leaderArrivedAt = tracker.leaderArrivedAt ? undefined : new Date().toISOString();
+      const memberJoinedAt = { ...tracker.memberJoinedAt };
+
+      if (leaderArrivedAt) {
+        memberJoinedAt[currentUser.email] = leaderArrivedAt;
+      } else {
+        delete memberJoinedAt[currentUser.email];
+      }
+
+      return { ...tracker, leaderArrivedAt, memberJoinedAt };
+    });
+  }, [currentUser, updateTracker]);
   const toggleEventTrackerTask = useCallback((projectId: string, taskId: string) => updateTracker(projectId, (tracker) => ({ ...tracker, tasks: tracker.tasks.map((task) => task.id === taskId ? { ...task, completed: !task.completed, completedAt: task.completed ? undefined : new Date().toISOString() } : task) })), [updateTracker]);
   const updateEventDelay = useCallback((projectId: string, delayNote: string) => updateTracker(projectId, (tracker) => ({ ...tracker, delayNote })), [updateTracker]);
   const sendEventTrackerMessage = useCallback((projectId: string, message: string, senderRole: "admin" | "team-leader") => updateTracker(projectId, (tracker) => ({ ...tracker, messages: [...tracker.messages, { id: `MSG-${Date.now()}`, sender: currentUser?.name ?? senderRole, senderRole, message, sentAt: new Date().toISOString() }] })), [currentUser, updateTracker]);
+
+  const markEventCompleted = useCallback((projectId: string) => {
+    setProjects((current) => current.map((project) => project.id === projectId && project.eventTeam?.some((member) => member.memberEmail === currentUser?.email && (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader")
+      ? { ...project, eventTracker: { ...(project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }), eventCompletedAt: new Date().toISOString() }, editingWorkflow: project.editingWorkflow ?? { stageProgress: {} } }
+      : project));
+  }, [currentUser]);
+
+  const assignEditor = useCallback((projectId: string, editorEmail: string) => {
+    const editor = editors.find((item) => item.email.toLowerCase() === editorEmail.toLowerCase() && item.editingRoles?.length);
+    if (!editor) return;
+
+    setProjects((current) => current.map((project) => project.id === projectId && project.eventTracker?.eventCompletedAt
+      ? { ...project, editingWorkflow: { ...(project.editingWorkflow ?? { stageProgress: {} }), assignedEditorEmail: editor.email } }
+      : project));
+  }, [editors]);
+
+  const updateEditingSetup = useCallback((projectId: string, setup: { sourceDriveUrl: string; adminTimeline: string; timelineDueDate: string; milestones: EditingMilestone[] }) => {
+    setProjects((current) => current.map((project) => {
+      const workflow = project.editingWorkflow;
+      if (project.id !== projectId || !workflow) return project;
+
+      const currentMilestones = getEditingMilestones(workflow);
+      const milestones = setup.milestones.map((milestone) => {
+        const currentMilestone = currentMilestones.find((item) => item.id === milestone.id);
+        return {
+          ...milestone,
+          label: milestone.label.trim(),
+          status: currentMilestone?.status ?? milestone.status,
+          updatedAt: currentMilestone?.updatedAt ?? milestone.updatedAt,
+        };
+      });
+
+      return { ...project, editingWorkflow: { ...workflow, ...setup, milestones } };
+    }));
+  }, []);
+
+  const sendEditingChatMessage = useCallback((projectId: string, message: string) => {
+    const text = message.trim();
+    if (!currentUser || !text || !["admin", "client", "editor"].includes(currentUser.role ?? "")) return;
+
+    setProjects((current) => current.map((project) => {
+      const workflow = project.editingWorkflow;
+      if (project.id !== projectId || !workflow?.assignedEditorEmail) return project;
+
+      const canParticipate = currentUser.role === "admin"
+        || (currentUser.role === "client" && project.client.email.toLowerCase() === currentUser.email.toLowerCase())
+        || (currentUser.role === "editor" && workflow.assignedEditorEmail.toLowerCase() === currentUser.email.toLowerCase());
+      if (!canParticipate) return project;
+
+      const chatMessage: EditingChatMessage = {
+        id: `EDIT-MSG-${Date.now()}`,
+        senderName: currentUser.name,
+        senderEmail: currentUser.email,
+        senderRole: currentUser.role as EditingChatMessage["senderRole"],
+        message: text,
+        sentAt: new Date().toISOString(),
+      };
+
+      return { ...project, editingWorkflow: { ...workflow, chatMessages: [...(workflow.chatMessages ?? []), chatMessage] } };
+    }));
+  }, [currentUser]);
+
+  const markEditorDownloadComplete = useCallback((projectId: string, editorEmail: string) => {
+    setProjects((current) => current.map((project) => project.id === projectId && project.editingWorkflow?.assignedEditorEmail === editorEmail
+      ? { ...project, editingWorkflow: { ...project.editingWorkflow, downloadCompletedAt: new Date().toISOString() } }
+      : project));
+  }, []);
+
+  const updateEditingMilestone = useCallback((projectId: string, editorEmail: string, milestoneId: string, status: "NOT_STARTED" | "COMPLETED") => {
+    setProjects((current) => current.map((project) => {
+      const workflow = project.editingWorkflow;
+      if (project.id !== projectId || workflow?.assignedEditorEmail !== editorEmail || !workflow.downloadCompletedAt) return project;
+      const milestones = getEditingMilestones(workflow).map((milestone) => milestone.id === milestoneId
+        ? { ...milestone, status, updatedAt: new Date().toISOString() }
+        : milestone);
+      return { ...project, editingWorkflow: { ...workflow, milestones } };
+    }));
+  }, []);
+
+  const deliverEditedFiles = useCallback((projectId: string, editorEmail: string, finalDriveUrl: string) => {
+    setProjects((current) => current.map((project) => project.id === projectId
+      && project.editingWorkflow?.assignedEditorEmail === editorEmail
+      && Boolean(project.editingWorkflow.downloadCompletedAt)
+      && getEditingMilestones(project.editingWorkflow).length > 0
+      && getEditingMilestones(project.editingWorkflow).every((milestone) => milestone.status === "COMPLETED")
+      && /^https?:\/\//i.test(finalDriveUrl.trim())
+      ? { ...project, editingWorkflow: { ...project.editingWorkflow, finalDriveUrl, deliveredAt: new Date().toISOString() } }
+      : project));
+  }, []);
 
   const value = useMemo<ProjectContextValue>(
     () => ({
@@ -669,6 +873,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       loginAdmin,
       loginClient,
       loginTeam,
+      loginEditor,
+      editors,
+      createEditor,
       registerTeam,
       teamRegistrations,
       approveTeamRegistration,
@@ -701,8 +908,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       toggleEventTrackerTask,
       updateEventDelay,
       sendEventTrackerMessage,
+      markEventCompleted,
+      assignEditor,
+      updateEditingSetup,
+      sendEditingChatMessage,
+      markEditorDownloadComplete,
+      updateEditingMilestone,
+      deliverEditedFiles,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignTeam, createProjectRequest, createTeamMember, currentUser, isLoggedIn, isReady, loginAdmin, loginClient, loginTeam, logout, markLeaderArrived, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEventTrackerMessage, sendNegotiation, sendQuote, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEventDelay, view],
+    [acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

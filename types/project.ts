@@ -1,4 +1,4 @@
-export type ViewMode = "admin" | "client" | "team";
+export type ViewMode = "admin" | "client" | "team" | "editor";
 
 export type ProjectStatus =
   | "NEW_REQUEST"
@@ -91,10 +91,62 @@ export interface EventTrackerMessage {
 
 export interface EventTracker {
   leaderArrivedAt?: string;
+  eventCompletedAt?: string;
   memberJoinedAt: Record<string, string>;
   tasks: EventTrackerTask[];
   delayNote?: string;
   messages: EventTrackerMessage[];
+}
+
+export interface EditorAccount {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  username: string;
+  password: string;
+  editingRoles: EditingRole[];
+  createdAt: string;
+}
+
+export const EDITING_ROLES = ["Video Editor", "Still Photo Editor", "Album Editor"] as const;
+export type EditingRole = (typeof EDITING_ROLES)[number];
+
+export type EditingStage = "Wedding day morning" | "Wedding Evening" | "Bidayee bodhuboron" | "Reception";
+export type EditingStageStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+
+export interface EditingStageProgress {
+  status: EditingStageStatus;
+  updatedAt?: string;
+}
+
+export interface EditingMilestone {
+  id: string;
+  label: string;
+  status: EditingStageStatus;
+  updatedAt?: string;
+}
+
+export interface EditingChatMessage {
+  id: string;
+  senderName: string;
+  senderEmail: string;
+  senderRole: "admin" | "client" | "editor";
+  message: string;
+  sentAt: string;
+}
+
+export interface EditingWorkflow {
+  assignedEditorEmail?: string;
+  sourceDriveUrl?: string;
+  downloadCompletedAt?: string;
+  adminTimeline?: string;
+  timelineDueDate?: string;
+  milestones?: EditingMilestone[];
+  stageProgress: Partial<Record<EditingStage, EditingStageProgress>>;
+  chatMessages?: EditingChatMessage[];
+  finalDriveUrl?: string;
+  deliveredAt?: string;
 }
 
 export interface TeamInterest {
@@ -117,7 +169,6 @@ export interface TeamRegistration {
   aadharFileName: string;
   selfieFileName: string;
   phonePe: string;
-  userType: TeamUserType;
   preferredRoles: TeamMemberRole[];
   username?: string;
   password?: string;
@@ -126,7 +177,6 @@ export interface TeamRegistration {
 }
 
 export const TEAM_MEMBER_ROLES = [
-  "Team Leader",
   "Candid Photographer",
   "Group Photo taker",
   "Traditional photo taker",
@@ -139,9 +189,13 @@ export const TEAM_MEMBER_ROLES = [
   "Live Video",
   "Sound Operator",
   "Driver",
+  "Video Editor",
+  "Still Photo Editor",
+  "Album Editor",
 ] as const;
 
-export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number];
+// Keep the old value in the type for existing saved assignments; it is not a selectable duty role.
+export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number] | "Team Leader";
 
 export interface TeamMember {
   id: string;
@@ -158,7 +212,6 @@ export interface Project {
   eventType: string;
   eventDate: string;
   venue: string;
-  guestCount: number;
   requirements: string;
   initialQuote?: Quote;
   clientResponse?: ClientResponse;
@@ -169,6 +222,7 @@ export interface Project {
   eventTeam?: EventTeamMember[];
   teamBrief?: TeamBrief;
   eventTracker?: EventTracker;
+  editingWorkflow?: EditingWorkflow;
   teamInterest?: TeamInterest[];
 }
 

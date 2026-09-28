@@ -6,16 +6,17 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   actions?: ReactNode;
+  className?: string;
 }
 
-export function Modal({ title, open, onClose, children, actions }: ModalProps) {
+export function Modal({ title, open, onClose, children, actions, className }: ModalProps) {
   if (!open) {
     return null;
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+      <div className={`modal-card ${className ?? ""}`} onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">

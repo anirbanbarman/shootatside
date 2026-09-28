@@ -12,7 +12,6 @@ export const mockProjects: Project[] = [
     eventType: "Wedding",
     eventDate: "2026-12-25",
     venue: "The Grand Palace, Kolkata",
-    guestCount: 250,
     requirements:
       "Wedding photography + cinematic videography with pre-wedding coverage and full-day event editing.",
   },
@@ -27,7 +26,6 @@ export const mockProjects: Project[] = [
     eventType: "Corporate Event",
     eventDate: "2026-09-18",
     venue: "Hotel Westview, Mumbai",
-    guestCount: 180,
     requirements:
       "Corporate gala coverage, keynote moments, team portraits, and branded highlight reel.",
     initialQuote: {
@@ -57,7 +55,6 @@ export const mockProjects: Project[] = [
     eventType: "Birthday Celebration",
     eventDate: "2026-11-05",
     venue: "Skyline Rooftop, Bengaluru",
-    guestCount: 120,
     requirements:
       "Lifestyle portrait session, candid coverage, and a short teaser video for social media.",
     initialQuote: {
@@ -81,7 +78,6 @@ export const mockProjects: Project[] = [
     eventType: "Product Launch",
     eventDate: "2026-10-02",
     venue: "Innovation Hub, Ahmedabad",
-    guestCount: 90,
     requirements:
       "Event coverage, product hero shots, stage highlights, and social media teaser content.",
     initialQuote: {

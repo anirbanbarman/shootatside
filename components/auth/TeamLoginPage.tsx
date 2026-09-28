@@ -6,14 +6,16 @@ import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { TeamRegistrationForm } from "@/components/auth/TeamRegistrationForm";
+import { EDITING_ROLES } from "@/types/project";
 
 export function TeamLoginPage() {
   const router = useRouter();
-  const { loginTeam } = useProjectContext();
+  const { loginTeam, teamRegistrations } = useProjectContext();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showRegistration, setShowRegistration] = useState(false);
   const [error, setError] = useState("");
+  const [editorPortalSuggested, setEditorPortalSuggested] = useState(false);
 
   const handleLogin = () => {
     if (!username.trim() || !password.trim()) {
@@ -22,7 +24,14 @@ export function TeamLoginPage() {
     }
 
     if (!loginTeam(username, password)) {
-      setError("Your account is pending approval or the credentials are incorrect.");
+      const editorAccount = teamRegistrations.find((registration) => registration.status === "ACCEPTED"
+        && registration.username === username.trim()
+        && registration.password === password
+        && registration.preferredRoles.some((role) => EDITING_ROLES.includes(role as (typeof EDITING_ROLES)[number])));
+      setEditorPortalSuggested(Boolean(editorAccount));
+      setError(editorAccount
+        ? "Your registration includes an editing specialty. Please sign in to the Editor Workspace at /editor."
+        : "Your account is pending approval or the credentials are incorrect.");
       return;
     }
 
@@ -72,7 +81,7 @@ export function TeamLoginPage() {
             />
           </div>
 
-          {error ? <div className="error-box">{error}</div> : null}
+          {error ? <div className="error-box">{error}{editorPortalSuggested ? <> <Link href="/editor">Open Editor Workspace</Link></> : null}</div> : null}
 
           <button type="button" className="primary-button full-width" onClick={handleLogin}>
             Login to Team Portal
