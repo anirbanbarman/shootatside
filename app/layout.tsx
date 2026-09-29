@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 
 import { ProjectProvider } from "@/components/providers/ProjectProvider";
+import { MaterialUIProvider } from "@/components/providers/MaterialUIProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +25,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <ProjectProvider>{children}</ProjectProvider>
+        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+          <MaterialUIProvider>
+            <ProjectProvider>{children}</ProjectProvider>
+          </MaterialUIProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

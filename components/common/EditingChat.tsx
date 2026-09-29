@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { SectionCard } from "@/components/common/ui";
+import { Chip } from "@mui/material";
 
 function formatMessageTime(value: string) {
   return new Date(value).toLocaleString("en-IN", {
@@ -34,8 +36,8 @@ export function EditingChat({ projectId }: { projectId: string }) {
     setDraft("");
   };
 
-  return <section className="editing-chat" aria-label="Editing project chat">
-    <div className="editing-chat-heading"><div><h4>Project Chat</h4><p>Messages are shared with the client, admin, and assigned editor.</p></div><span className="pill">{workflow.chatMessages?.length ?? 0} messages</span></div>
+  return <SectionCard className="editing-chat" aria-label="Editing project chat" title="Project Chat" action={<Chip size="small" label={`${workflow.chatMessages?.length ?? 0} messages`} />}>
+    <p className="editing-chat-description">Messages are shared with the client, admin, and assigned editor.</p>
     <div className="editing-chat-messages" aria-live="polite">
       {workflow.chatMessages?.length ? workflow.chatMessages.map((message) => <article className={`editing-chat-message editing-chat-message-${message.senderRole}`} key={message.id}>
         <div><strong>{message.senderName}</strong><span>{message.senderRole}</span><time dateTime={message.sentAt}>{formatMessageTime(message.sentAt)}</time></div>
@@ -47,5 +49,5 @@ export function EditingChat({ projectId }: { projectId: string }) {
       <input id={`editing-chat-${projectId}`} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message to the project team…" maxLength={2000} />
       <button type="submit" className="primary-button" disabled={!draft.trim()}>Send</button>
     </form>
-  </section>;
+  </SectionCard>;
 }

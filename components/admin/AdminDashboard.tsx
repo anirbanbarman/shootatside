@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
 import { EditorManagementPanel } from "@/components/admin/EditorManagementPanel";
+import { Box, Typography } from "@mui/material";
 import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -71,13 +72,13 @@ function TeamHierarchyBuilder() {
   </div>;
 }
 
-function TeamManagementPanel() {
+export function TeamManagementPanel() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
   const activeSubsection = (searchParams.get("section") as "registrations" | "interests" | "hierarchy" | "hierarchy-builder" | "live-tracker" | null) ?? "registrations";
-  const setActiveSubsection = (section: "registrations" | "interests" | "hierarchy-builder" | "live-tracker") => router.replace(`/admin?section=${section}`);
+  const setActiveSubsection = (section: "registrations" | "interests" | "hierarchy-builder" | "live-tracker") => router.replace(`/admin/team?section=${section}`);
   const [interestDate, setInterestDate] = useState("");
   const [hierarchyDate, setHierarchyDate] = useState("");
   const [openTeamEventId, setOpenTeamEventId] = useState<string | null>(null);
@@ -228,6 +229,7 @@ export function AdminDashboard() {
   const [negotiationError, setNegotiationError] = useState("");
   const [negotiationSuccess, setNegotiationSuccess] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
+  const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
   const isTeamManagement = Boolean(searchParams.get("section"));
 
@@ -252,6 +254,11 @@ export function AdminDashboard() {
     const query = projectFilter.trim().toLowerCase();
     return !query || [project.id, project.client.name, project.eventType, project.venue].some((value) => value.toLowerCase().includes(query));
   });
+
+  const handleProjectSelect = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setProjectDetailsOpen(true);
+  };
 
   const handleSendQuote = () => {
     const amount = Number(quoteAmount);
@@ -344,27 +351,19 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <div className="dashboard-grid">
+      <div className="admin-project-list">
         <div className="panel panel-wide">
           <div className="panel-header space-between">
             <div><h3>Project List</h3><p className="form-note">{filteredProjects.length} of {projects.length} projects</p></div>
             <input className="project-filter-input" aria-label="Filter projects" placeholder="Filter projects" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} />
           </div>
-          <ProjectTable projects={filteredProjects} onSelect={setSelectedProjectId} selectedProjectId={selectedProjectId} />
+          <ProjectTable projects={filteredProjects} onSelect={handleProjectSelect} selectedProjectId={selectedProjectId} />
         </div>
 
-        <div className="panel panel-detail selected-project-panel">
-          <div className="panel-header space-between">
-            <h3>Project Details</h3>
-            <div className="detail-actions">
-              <button type="button" className="icon-button-inline" onClick={() => setTimelineOpen(true)} title="Open timeline">
-                ⏱
-              </button>
-              <StatusBadge project={selectedProject} />
-            </div>
-          </div>
+      </div>
 
-          <div className="detail-card">
+      <Modal title={<Box className="admin-project-dialog-title"><Box><Typography variant="overline">{selectedProject.id} · {selectedProject.eventType}</Typography><Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedProject.client.name}</Typography></Box><StatusBadge project={selectedProject} /></Box>} open={isProjectDetailsOpen} onClose={() => setProjectDetailsOpen(false)} className="admin-project-details-dialog">
+          <div className="detail-card admin-project-detail-card">
             <div className="section-block">
               <p className="eyebrow">Client Information</p>
               <div className="field-grid">
@@ -461,10 +460,7 @@ export function AdminDashboard() {
             ) : null}
 
           </div>
-        </div>
-
-      </div>
-
+      </Modal>
       </div>}
       <Modal title="Project Timeline" open={isTimelineOpen} onClose={() => setTimelineOpen(false)}>
         <ProjectTimeline project={selectedProject} />
