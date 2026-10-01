@@ -18,7 +18,7 @@ export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker"
 
   return <div className="dashboard-shell">
     <section className="page-intro">
-      <div><p className="eyebrow">Team Portal</p><h2>{mode === "tracker" ? "Event Tracker" : "Available Events"}</h2></div>
+      <div><p className="eyebrow">Team</p><h2>{mode === "tracker" ? "Event Tracker" : "Available Events"}</h2></div>
       <div className="header-actions"><span className="pill">{mode === "tracker" ? `${visibleProjects.length} events today` : `${confirmedProjects.length} confirmed events`}</span></div>
     </section>
 

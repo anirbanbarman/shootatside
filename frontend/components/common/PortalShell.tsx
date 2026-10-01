@@ -30,8 +30,8 @@ type PortalLink = { href: string; label: string; icon: PortalIcon; children?: Po
 
 const portalCopy: Record<PortalRole, { label: string; title: string; links: PortalLink[] }> = {
   admin: {
-    label: "Studio control",
-    title: "Admin Portal",
+    label: "Admin",
+    title: "Admin",
     links: [
       { href: "/admin", label: "Dashboard", icon: DashboardIcon },
       { href: "/admin/team/registrations", label: "Team Management", icon: GroupsIcon, children: [
@@ -44,18 +44,18 @@ const portalCopy: Record<PortalRole, { label: string; title: string; links: Port
     ],
   },
   client: {
-    label: "Your production desk",
-    title: "Client Portal",
+    label: "Client",
+    title: "Client",
     links: [{ href: "/client", label: "My Projects", icon: FolderOpenIcon }, { href: "/client/new-request", label: "New Request", icon: AddCircleOutlineIcon }],
   },
   team: {
-    label: "Field operations",
-    title: "Team Portal",
+    label: "Team",
+    title: "Team",
     links: [{ href: "/team/events", label: "Available Events", icon: EventAvailableIcon }, { href: "/team/tracker", label: "Event Tracker", icon: ScheduleIcon }],
   },
   editor: {
-    label: "Post-production studio",
-    title: "Editor Dashboard",
+    label: "Editor",
+    title: "Editor",
     links: [{ href: "/editor", label: "Editing Jobs", icon: ContentCutIcon }],
   },
 };
@@ -78,8 +78,7 @@ export function PortalShell({ role, children }: { role: PortalRole; children: Re
     <div className={`portal-layout portal-layout-${role}`}>
       <Box component="header" className="portal-header">
         <Link href="/" className="portal-brand"><span className="portal-brand-mark">S</span><span>Studio Shoot at Sight</span></Link>
-        <div className="portal-header-context"><Typography variant="overline">{copy.label}</Typography><Typography variant="h6" component="strong">{copy.title}</Typography></div>
-        <div className="portal-user"><Typography component="span">{currentUser?.name ?? "Account"}</Typography><Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout}>Log out</Button></div>
+        <div className="portal-user"><Typography component="span">{currentUser?.name ?? "Account"} ({role.charAt(0).toUpperCase() + role.slice(1)})</Typography><Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout}>Log out</Button></div>
       </Box>
 
       <Box component="aside" className="portal-sidebar">

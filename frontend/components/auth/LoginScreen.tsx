@@ -7,8 +7,8 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 export function LoginScreen() {
   const { loginAdmin, loginClient, loginTeam } = useProjectContext();
   const [mode, setMode] = useState<"admin" | "client" | "team">("admin");
-  const [adminEmail, setAdminEmail] = useState("admin@ani.photography.com");
-  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -16,17 +16,35 @@ export function LoginScreen() {
   const [teamPassword, setTeamPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleAdminLogin = () => {
+  const handleAdminLogin = async () => {
     if (!adminEmail.trim() || !adminPassword.trim()) {
       setError("Please enter your admin email and password.");
       return;
     }
 
-    loginAdmin({
-      name: "Ani Barman",
-      email: adminEmail.trim(),
-      phone: "8906349799",
-    });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/auth/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword.trim() }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.ok) {
+        setError(data?.message ?? "Invalid admin credentials.");
+        return;
+      }
+
+      loginAdmin({
+        name: data.user?.name ?? "Admin",
+        email: data.user?.email ?? adminEmail.trim(),
+        phone: data.user?.phone ?? "",
+        role: "admin",
+      });
+    } catch {
+      setError("Unable to reach the backend. Please try again.");
+    }
   };
 
   const handleClientLogin = () => {
@@ -60,13 +78,13 @@ export function LoginScreen() {
         <div className="login-brand">📷 Studio Shoot at Sight</div>
         <div className="login-switcher">
           <button type="button" className={mode === "admin" ? "login-tab active" : "login-tab"} onClick={() => setMode("admin")}>
-            Admin Panel
+            Admin
           </button>
           <button type="button" className={mode === "client" ? "login-tab active" : "login-tab"} onClick={() => setMode("client")}>
-            Client Portal
+            Client
           </button>
           <button type="button" className={mode === "team" ? "login-tab active" : "login-tab"} onClick={() => setMode("team")}>
-            Team Login
+            Team
           </button>
         </div>
       </header>
@@ -75,13 +93,13 @@ export function LoginScreen() {
         {mode === "admin" ? (
           <>
             <div className="login-title">Admin Login</div>
-            <p className="login-subtitle">Pre-filled admin access for the photography dashboard.</p>
+            <p className="login-subtitle">Use your admin email and password to access the dashboard.</p>
             <div className="login-form">
               <label htmlFor="admin-email">Email</label>
-              <input id="admin-email" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+              <input id="admin-email" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="Enter your email" />
 
               <label htmlFor="admin-password">Password</label>
-              <input id="admin-password" type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+              <input id="admin-password" type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Enter your password" />
 
               <button type="button" className="primary-button full-width" onClick={handleAdminLogin}>
                 Login as Admin
@@ -96,13 +114,13 @@ export function LoginScreen() {
             <p className="login-subtitle">Use your request details to view only your submitted projects.</p>
             <div className="login-form">
               <label htmlFor="client-name">Name</label>
-              <input id="client-name" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+              <input id="client-name" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter your name" />
 
               <label htmlFor="client-email">Email</label>
-              <input id="client-email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
+              <input id="client-email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="Enter your email" />
 
               <label htmlFor="client-phone">Phone</label>
-              <input id="client-phone" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
+              <input id="client-phone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="Enter your phone number" />
 
               <button type="button" className="primary-button full-width" onClick={handleClientLogin}>
                 Open My Portal
@@ -113,7 +131,7 @@ export function LoginScreen() {
 
         {mode === "team" ? (
           <>
-            <div className="login-title">Team Login</div>
+            <div className="login-title">Team</div>
             <p className="login-subtitle">Use the team code shared by the admin when it is ready.</p>
             <div className="login-form">
               <label htmlFor="team-username">Username</label>
@@ -123,7 +141,7 @@ export function LoginScreen() {
               <input id="team-password" type="password" value={teamPassword} onChange={(e) => setTeamPassword(e.target.value)} />
 
               <button type="button" className="primary-button full-width" onClick={handleTeamLogin}>
-                Login to Team Portal
+                Login to Team
               </button>
             </div>
           </>

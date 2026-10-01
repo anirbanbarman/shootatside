@@ -112,7 +112,7 @@ export function TeamManagementPanel() {
     <div className="dashboard-shell">
       <section className="page-intro">
         <div>
-          <p className="eyebrow">Admin Portal</p>
+          <p className="eyebrow">Admin</p>
           <h2>{sectionHeading}</h2>
         </div>
         <span className="pill">{requests.length} interest requests</span>
@@ -268,6 +268,7 @@ export function AdminDashboard() {
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
   const [quoteError, setQuoteError] = useState("");
   const [quoteSuccess, setQuoteSuccess] = useState("");
+  const [isSendingQuote, setIsSendingQuote] = useState(false);
   const [negotiationAmount, setNegotiationAmount] = useState("");
   const [negotiationComment, setNegotiationComment] = useState("");
   const [negotiationAdvancePercent, setNegotiationAdvancePercent] = useState("30");
@@ -306,7 +307,7 @@ export function AdminDashboard() {
     setProjectDetailsOpen(true);
   };
 
-  const handleSendQuote = () => {
+  const handleSendQuote = async () => {
     const amount = Number(quoteAmount);
     const advancePercent = Number(quoteAdvancePercent);
 
@@ -328,12 +329,20 @@ export function AdminDashboard() {
       return;
     }
 
-    sendQuote(selectedProject.id, amount, quoteComment.trim(), advancePercent);
+    setIsSendingQuote(true);
     setQuoteError("");
-    setQuoteSuccess("Quote sent successfully.");
-    setQuoteAmount("");
-    setQuoteComment("");
-    setQuoteAdvancePercent("30");
+    setQuoteSuccess("");
+    try {
+      await sendQuote(selectedProject.id, amount, quoteComment.trim(), advancePercent);
+      setQuoteSuccess("Quote sent successfully and saved.");
+      setQuoteAmount("");
+      setQuoteComment("");
+      setQuoteAdvancePercent("30");
+    } catch (error) {
+      setQuoteError(error instanceof Error ? error.message : "Unable to save the quote. Please try again.");
+    } finally {
+      setIsSendingQuote(false);
+    }
   };
 
   const handleSendNegotiation = () => {
@@ -473,7 +482,7 @@ export function AdminDashboard() {
                   </div>
                   {quoteError ? <div className="error-box">{quoteError}</div> : null}
                   {quoteSuccess ? <div className="success-box">{quoteSuccess}</div> : null}
-                  <button type="button" className="primary-button" onClick={handleSendQuote}>Send Quote</button>
+                  <button type="button" className="primary-button" onClick={handleSendQuote} disabled={isSendingQuote}>{isSendingQuote ? "Saving Quote…" : "Send Quote"}</button>
                 </div>
               </div>
             )}

@@ -118,7 +118,7 @@ export function ClientDashboard() {
     <div className="dashboard-shell">
       <section className="page-intro">
         <div>
-          <p className="eyebrow">Client Portal</p>
+          <p className="eyebrow">Client</p>
           <h2>My Projects</h2>
         </div>
         <div className="header-actions">

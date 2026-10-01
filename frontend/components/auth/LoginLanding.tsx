@@ -14,21 +14,21 @@ export function LoginLanding() {
       <div className="landing-cards">
         <Link href="/login/admin" className="landing-card admin-card">
           <div className="card-icon">🔐</div>
-          <h2>Admin Panel</h2>
+          <h2>Admin</h2>
           <p>Manage quotes, negotiations, and projects</p>
           <div className="card-cta">Login to Admin</div>
         </Link>
 
         <Link href="/login/client" className="landing-card client-card">
           <div className="card-icon">👤</div>
-          <h2>Client Portal</h2>
+          <h2>Client</h2>
           <p>View your requests, quotes, and bookings</p>
           <div className="card-cta">Login to Client</div>
         </Link>
 
         <Link href="/login/team" className="landing-card team-card">
           <div className="card-icon">👥</div>
-          <h2>Team Access</h2>
+          <h2>Team</h2>
           <p>Access team collaboration portal</p>
           <div className="card-cta">Login to Team</div>
         </Link>

@@ -9,13 +9,13 @@ const defaultServices = ["Still Photography", "Cinematography", "Drone Shoot"];
 export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
   const { createProjectRequest } = useProjectContext();
   const [form, setForm] = useState({
-    name: "Ani Barman",
-    email: "admin@ani.photography.com",
-    phone: "8906349799",
+    name: "",
+    email: "",
+    phone: "",
     eventType: "Wedding",
-    eventDate: "2026-12-25",
-    venue: "Kolkata",
-    requirements: "Looking for complete wedding photography and cinematography package.",
+    eventDate: "",
+    venue: "",
+    requirements: "",
     eventSide: "Single Side",
     budget: "₹10,000 - ₹15,000",
     services: defaultServices,
@@ -61,7 +61,7 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
 
     createProjectRequest({
       name: form.name.trim(),
-      email: form.email.trim() || "client@shootatside.com",
+      email: form.email.trim(),
       phone: form.phone.trim(),
       eventType: form.eventType.trim(),
       eventDate: form.eventDate,
@@ -99,17 +99,17 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       <div className="form-grid">
         <div className="form-group">
           <label htmlFor="clientName">Name</label>
-          <input id="clientName" type="text" value={form.name} onChange={(event) => handleChange("name", event.target.value)} required />
+          <input id="clientName" type="text" value={form.name} onChange={(event) => handleChange("name", event.target.value)} placeholder="Enter your name" required />
         </div>
 
         <div className="form-group">
           <label htmlFor="clientPhone">Phone Number</label>
-          <input id="clientPhone" type="tel" value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} required />
+          <input id="clientPhone" type="tel" value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="Enter your phone number" required />
         </div>
 
         <div className="form-group">
           <label htmlFor="clientLocation">Location</label>
-          <input id="clientLocation" type="text" value={form.venue} onChange={(event) => handleChange("venue", event.target.value)} required />
+          <input id="clientLocation" type="text" value={form.venue} onChange={(event) => handleChange("venue", event.target.value)} placeholder="Enter event location" required />
         </div>
 
         <div className="form-group">

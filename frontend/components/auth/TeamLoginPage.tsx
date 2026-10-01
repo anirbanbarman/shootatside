@@ -43,7 +43,7 @@ export function TeamLoginPage() {
       <div className="role-login-container team-surface">
         <div className="role-login-header team-header">
           <div className="role-icon">👥</div>
-          <h1>Team Access</h1>
+          <h1>Team</h1>
           <p>Team Collaboration Portal</p>
         </div>
 
@@ -62,7 +62,7 @@ export function TeamLoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your username"
+              placeholder="Enter your username"
             />
           </div>
 
@@ -73,14 +73,14 @@ export function TeamLoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
+              placeholder="Enter your password"
             />
           </div>
 
           {error ? <div className="error-box">{error}{editorPortalSuggested ? <> <Link href="/editor">Open Editor Workspace</Link></> : null}</div> : null}
 
           <button type="button" className="primary-button full-width" onClick={handleLogin}>
-            Login to Team Portal
+            Login to Team
           </button>
 
           <Link href="/editor" className="secondary-button full-width editor-link-button">

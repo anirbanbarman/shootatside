@@ -8,9 +8,9 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 export function ClientLoginPage() {
   const router = useRouter();
   const { loginClient } = useProjectContext();
-  const [name, setName] = useState("Aisha Khan");
-  const [email, setEmail] = useState("aisha.khan@example.com");
-  const [phone, setPhone] = useState("+91 99887 66554");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = () => {
@@ -32,7 +32,7 @@ export function ClientLoginPage() {
       <div className="role-login-container client-surface">
         <div className="role-login-header client-header">
           <div className="role-icon">👤</div>
-          <h1>Client Portal</h1>
+          <h1>Client</h1>
           <p>Access Your Photography Projects</p>
         </div>
 
@@ -46,7 +46,7 @@ export function ClientLoginPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
+              placeholder="Enter your name"
             />
           </div>
 
@@ -57,7 +57,7 @@ export function ClientLoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
+              placeholder="Enter your email"
             />
           </div>
 
@@ -68,7 +68,7 @@ export function ClientLoginPage() {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98765 43210"
+              placeholder="Enter your phone number"
             />
           </div>
 

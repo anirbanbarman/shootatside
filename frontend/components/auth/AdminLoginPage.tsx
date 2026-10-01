@@ -8,11 +8,11 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 export function AdminLoginPage() {
   const router = useRouter();
   const { loginAdmin } = useProjectContext();
-  const [email, setEmail] = useState("admin@ani.photography.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const normalizedEmail = email.trim();
     const normalizedPassword = password.trim();
 
@@ -21,21 +21,30 @@ export function AdminLoginPage() {
       return;
     }
 
-    const validEmail = normalizedEmail.toLowerCase() === "admin@ani.photography.com";
-    const validPassword = normalizedPassword === "admin123";
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/auth/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword }),
+      });
 
-    if (!validEmail || !validPassword) {
-      setError("Invalid credentials. Use the demo admin login details below.");
-      return;
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.ok) {
+        setError(data?.message ?? "Invalid admin credentials.");
+        return;
+      }
+
+      loginAdmin({
+        name: data.user?.name ?? "Admin",
+        email: data.user?.email ?? normalizedEmail,
+        phone: data.user?.phone ?? "",
+        role: "admin",
+      });
+      router.replace("/admin");
+    } catch {
+      setError("Unable to reach the backend. Please try again.");
     }
-
-    loginAdmin({
-      name: "Ani Barman",
-      email: normalizedEmail,
-      phone: "8906349799",
-      role: "admin",
-    });
-    router.replace("/admin");
   };
 
   return (
@@ -43,7 +52,7 @@ export function AdminLoginPage() {
       <div className="role-login-container admin-surface">
         <div className="role-login-header admin-header">
           <div className="role-icon">🔐</div>
-          <h1>Admin Panel</h1>
+          <h1>Admin</h1>
           <p>Photography Management Dashboard</p>
         </div>
 
@@ -55,7 +64,7 @@ export function AdminLoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@ani.photography.com"
+              placeholder="Enter your email"
             />
           </div>
 
@@ -66,21 +75,15 @@ export function AdminLoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Enter your password"
             />
           </div>
 
           {error ? <div className="error-box">{error}</div> : null}
 
           <button type="button" className="primary-button full-width" onClick={handleLogin}>
-            Login to Admin Panel
+            Login to Admin
           </button>
-
-          <div className="demo-note">
-            <strong>Demo Credentials</strong>
-            <p>Email: admin@ani.photography.com</p>
-            <p>Password: admin123</p>
-          </div>
         </div>
       </div>
     </div>

@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { mockProjects } from "@/data/mockProjects";
 import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EditorApplication, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
 import { getEditingMilestones } from "@/utils/notifications";
 
@@ -66,7 +65,7 @@ interface ProjectContextValue {
   submitClientContactDetails: (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => void;
   resetDemoProjects: () => void;
   seedDemoProject: (scenario: DemoScenario) => void;
-  sendQuote: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
+  sendQuote: (projectId: string, amount: number, comment: string, advancePercent?: number) => Promise<void>;
   acceptQuote: (projectId: string) => void;
   rejectQuote: (projectId: string, comment: string) => void;
   sendNegotiation: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
@@ -96,20 +95,38 @@ interface ProjectContextValue {
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
 const STORAGE_KEYS = {
-  projects: "shootatside-projects",
   selectedProjectId: "shootatside-selected-project-id",
   user: "shootatside-current-user",
   roleState: "shootatside-role-state",
-  teamRegistrations: "shootatside-team-registrations",
-  teamMembers: "shootatside-team-members",
-  editors: "shootatside-editors",
-  editorApplications: "shootatside-editor-applications",
 } as const;
+
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.message ?? `Request failed for ${endpoint}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
 
 const DEFAULT_ROLE_STATE = {
   view: "admin" as ViewMode,
-  activeRole: "admin" as ViewMode | "guest",
+  activeRole: "guest" as ViewMode | "guest",
 };
 
 function readStoredValue<T>(key: string, fallback: T): T {
@@ -165,84 +182,16 @@ function writeSessionValue<T>(key: string, value: T | null | undefined) {
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const initialRoleState = readSessionValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, DEFAULT_ROLE_STATE);
-  const initialUser = readSessionValue<SessionUser | null>(STORAGE_KEYS.user, null);
-  const initialProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => {
-    const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
-    const eventTracker = project.eventTracker;
-    const memberJoinedAt = { ...(eventTracker?.memberJoinedAt ?? {}) };
-
-    if (leader && eventTracker?.leaderArrivedAt && !memberJoinedAt[leader.memberEmail]) {
-      memberJoinedAt[leader.memberEmail] = eventTracker.leaderArrivedAt;
-    }
-
-    return {
-      ...project,
-      eventTracker: eventTracker ? { ...eventTracker, memberJoinedAt } : undefined,
-      teamInterest: project.teamInterest
-        ? Array.isArray(project.teamInterest)
-          ? project.teamInterest
-          : [project.teamInterest as unknown as TeamInterest]
-        : undefined,
-    };
-  });
-  const initialSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
-  const initialTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
-    ...registration,
-    preferredRoles: registration.preferredRoles ?? [],
-  }));
-  const initialTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
-  const initialEditors = readStoredValue<EditorAccount[]>(STORAGE_KEYS.editors, []).map((editor) => ({
-    ...editor,
-    editingRoles: editor.editingRoles ?? [],
-  }));
-  const initialEditorApplications = readStoredValue<EditorApplication[]>(STORAGE_KEYS.editorApplications, []).map((application) => ({
-    ...application,
-    editingRoles: application.editingRoles ?? [],
-  }));
-  const initialNormalizedUser = initialUser
-    ? {
-        name: initialUser.name ?? "",
-        email: initialUser.email ?? "",
-        phone: initialUser.phone ?? "",
-        role: initialUser.role ?? (initialRoleState.activeRole === "admin" ? "admin" : initialRoleState.activeRole === "client" ? "client" : "team"),
-      }
-    : null;
-  const initialEditorMap = new Map(initialEditors.map((editor) => [editor.email.toLowerCase(), editor]));
-
-  initialTeamRegistrations.forEach((registration) => {
-    const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
-    if (registration.status !== "ACCEPTED" || editingRoles.length === 0 || !registration.username || !registration.password) return;
-
-    const email = registration.email.trim().toLowerCase();
-    const existingEditor = initialEditorMap.get(email);
-    if (existingEditor) {
-      existingEditor.editingRoles = Array.from(new Set([...existingEditor.editingRoles, ...editingRoles]));
-      return;
-    }
-
-    initialEditorMap.set(email, {
-      id: `EDITOR-${registration.id}`,
-      name: registration.name,
-      email,
-      phone: registration.mobile,
-      username: registration.username,
-      password: registration.password,
-      editingRoles,
-      createdAt: registration.submittedAt,
-    });
-  });
-
-  const [view, setView] = useState<ViewMode>(initialRoleState.view ?? "admin");
-  const [activeRole, setActiveRole] = useState<ViewMode | "guest">(initialRoleState.activeRole ?? "admin");
-  const [currentUser, setCurrentUser] = useState<SessionUser | null>(initialNormalizedUser);
-  const [projects, setProjects] = useState<Project[]>(initialProjects.length > 0 ? initialProjects : mockProjects);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialSelectedProject ?? mockProjects[0]?.id ?? "");
-  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(initialTeamRegistrations);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
-  const [editors, setEditors] = useState<EditorAccount[]>(Array.from(initialEditorMap.values()));
-  const [editorApplications, setEditorApplications] = useState<EditorApplication[]>(initialEditorApplications);
-  const [isReady, setIsReady] = useState(true);
+  const [view, setView] = useState<ViewMode>(DEFAULT_ROLE_STATE.view);
+  const [activeRole, setActiveRole] = useState<ViewMode | "guest">(DEFAULT_ROLE_STATE.activeRole);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [editors, setEditors] = useState<EditorAccount[]>([]);
+  const [editorApplications, setEditorApplications] = useState<EditorApplication[]>([]);
+  const [isReady, setIsReady] = useState(false);
 
   const syncFromStorage = useCallback(() => {
     if (typeof window === "undefined") {
@@ -259,100 +208,81 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           role: storedUser.role ?? (storedRoleState.activeRole === "admin" ? "admin" : storedRoleState.activeRole === "client" ? "client" : "team"),
         }
       : null;
-    const storedProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => {
-      const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
-      const eventTracker = project.eventTracker;
-      const memberJoinedAt = { ...(eventTracker?.memberJoinedAt ?? {}) };
-
-      if (leader && eventTracker?.leaderArrivedAt && !memberJoinedAt[leader.memberEmail]) {
-        memberJoinedAt[leader.memberEmail] = eventTracker.leaderArrivedAt;
-      }
-
-      return {
-        ...project,
-        eventTracker: eventTracker ? { ...eventTracker, memberJoinedAt } : undefined,
-        teamInterest: project.teamInterest
-          ? Array.isArray(project.teamInterest)
-            ? project.teamInterest
-            : [project.teamInterest as unknown as TeamInterest]
-          : undefined,
-      };
-    });
-    const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
-    const storedTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
-      ...registration,
-      preferredRoles: registration.preferredRoles ?? [],
-    }));
-    const storedTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
-    const storedEditors = readStoredValue<EditorAccount[]>(STORAGE_KEYS.editors, []).map((editor) => ({
-      ...editor,
-      editingRoles: editor.editingRoles ?? [],
-    }));
-    const storedEditorApplications = readStoredValue<EditorApplication[]>(STORAGE_KEYS.editorApplications, []).map((application) => ({
-      ...application,
-      editingRoles: application.editingRoles ?? [],
-    }));
-    const editorAccountsByEmail = new Map(storedEditors.map((editor) => [editor.email.toLowerCase(), editor]));
-
-    storedTeamRegistrations.forEach((registration) => {
-      const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
-      if (registration.status !== "ACCEPTED" || editingRoles.length === 0 || !registration.username || !registration.password) return;
-
-      const email = registration.email.trim().toLowerCase();
-      const existingEditor = editorAccountsByEmail.get(email);
-      if (existingEditor) {
-        existingEditor.editingRoles = Array.from(new Set([...existingEditor.editingRoles, ...editingRoles]));
-        return;
-      }
-
-      editorAccountsByEmail.set(email, {
-        id: `EDITOR-${registration.id}`,
-        name: registration.name,
-        email,
-        phone: registration.mobile,
-        username: registration.username,
-        password: registration.password,
-        editingRoles,
-        createdAt: registration.submittedAt,
-      });
-    });
 
     setView(storedRoleState.view ?? "admin");
     setActiveRole(storedRoleState.activeRole ?? "admin");
     setCurrentUser(normalizedUser);
-    setProjects(storedProjects.length > 0 ? storedProjects : mockProjects);
-    setSelectedProjectId(storedSelectedProject ?? mockProjects[0]?.id ?? "");
-    setTeamRegistrations(storedTeamRegistrations);
-    setTeamMembers(storedTeamMembers);
-    setEditors(Array.from(editorAccountsByEmail.values()));
-    setEditorApplications(storedEditorApplications);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !isReady) {
-      return;
+    syncFromStorage();
+    setIsReady(true);
+  }, [syncFromStorage]);
+
+  const loadFromApi = useCallback(async () => {
+    try {
+      const [projectsResponse, appsResponse, registrationsResponse] = await Promise.all([
+        fetchApi<Project[]>("/projects").catch(() => []),
+        fetchApi<EditorApplication[]>("/editor/applications").catch(() => []),
+        fetchApi<TeamRegistration[]>("/team/registrations").catch(() => []),
+      ]);
+
+      setProjects(projectsResponse ?? []);
+      setEditorApplications(appsResponse ?? []);
+      setTeamRegistrations(registrationsResponse ?? []);
+      const storedSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, null);
+      setSelectedProjectId(
+        projectsResponse?.find((project) => project.id === storedSelectedProject)?.id
+          ?? projectsResponse?.[0]?.id
+          ?? "",
+      );
+
+      const editorsFromRegistrations = (registrationsResponse ?? []).flatMap((registration) => {
+        if (registration.status !== "ACCEPTED" || !registration.username || !registration.password) {
+          return [];
+        }
+
+        const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+        if (editingRoles.length === 0) {
+          return [];
+        }
+
+        return [{
+          id: `EDITOR-${registration.id}`,
+          name: registration.name,
+          email: registration.email.trim().toLowerCase(),
+          phone: registration.mobile,
+          username: registration.username,
+          password: registration.password,
+          editingRoles,
+          createdAt: registration.submittedAt,
+        } satisfies EditorAccount];
+      });
+
+      setEditors((current) => {
+        const map = new Map(current.map((editor) => [editor.email.toLowerCase(), editor]));
+        editorsFromRegistrations.forEach((editor) => {
+          map.set(editor.email.toLowerCase(), editor);
+        });
+        return Array.from(map.values());
+      });
+    } catch {
+      setProjects([]);
+      setEditorApplications([]);
+      setTeamRegistrations([]);
+      setSelectedProjectId("");
     }
+  }, []);
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || event.key === STORAGE_KEYS.editors || event.key === STORAGE_KEYS.editorApplications || !event.key) {
-        syncFromStorage();
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [isReady, syncFromStorage]);
+  useEffect(() => {
+    void loadFromApi();
+  }, [loadFromApi]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isReady) {
       return;
     }
 
-    writeStoredValue(STORAGE_KEYS.projects, projects);
-    writeStoredValue(STORAGE_KEYS.teamRegistrations, teamRegistrations);
-    writeStoredValue(STORAGE_KEYS.teamMembers, teamMembers);
-    writeStoredValue(STORAGE_KEYS.editors, editors);
-    writeStoredValue(STORAGE_KEYS.editorApplications, editorApplications);
     if (selectedProjectId) {
       writeStoredValue(STORAGE_KEYS.selectedProjectId, selectedProjectId);
     } else {
@@ -366,7 +296,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     writeSessionValue(STORAGE_KEYS.roleState, { view, activeRole });
-  }, [activeRole, currentUser, editorApplications, editors, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
+  }, [activeRole, currentUser, isReady, selectedProjectId, view]);
 
   const isLoggedIn = Boolean(currentUser);
 
@@ -522,7 +452,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const createProjectRequest = useCallback(
-    (input: {
+    async (input: {
       name: string;
       email: string;
       phone: string;
@@ -531,8 +461,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       venue: string;
       requirements: string;
     }) => {
-      const generatedProject: Project = {
-        id: `PM-${Date.now()}`,
+      const payload = {
         client: {
           id: `CL-${Date.now()}`,
           name: input.name,
@@ -545,109 +474,52 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         requirements: input.requirements,
       };
 
-      setProjects((current) => [generatedProject, ...current]);
-      setSelectedProjectId(generatedProject.id);
+      try {
+        const response = await fetchApi<{ ok: boolean; project: Project }>("/projects", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
 
-      setCurrentUser({ name: input.name, email: input.email, phone: input.phone, role: "client" });
-      setActiveRole("client");
-      setView("client");
+        setProjects((current) => [response.project, ...current]);
+        setSelectedProjectId(response.project.id);
+        setCurrentUser({ name: input.name, email: input.email, phone: input.phone, role: "client" });
+        setActiveRole("client");
+        setView("client");
+      } catch {
+        const generatedProject: Project = {
+          id: `PM-${Date.now()}`,
+          client: payload.client,
+          eventType: input.eventType,
+          eventDate: input.eventDate,
+          venue: input.venue,
+          requirements: input.requirements,
+        };
+
+        setProjects((current) => [generatedProject, ...current]);
+        setSelectedProjectId(generatedProject.id);
+      }
     },
     [],
   );
 
   const resetDemoProjects = useCallback(() => {
-    setProjects(mockProjects);
-    setSelectedProjectId(mockProjects[0]?.id ?? "");
+    setProjects([]);
+    setSelectedProjectId("");
   }, []);
 
-  const seedDemoProject = useCallback((scenario: DemoScenario) => {
-    const today = new Date();
-    const id = `PM-${Date.now()}`;
-    const projectBase: Project = {
-      id,
-      client: {
-        id: `CL-${Date.now()}`,
-        name: "Demo Client",
-        email: "demo.client@example.com",
-        phone: "+91 98765 43210",
-      },
-      eventType: "Wedding",
-      eventDate: new Date(today.getTime() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10),
-      venue: "Demo Venue, Kolkata",
-      requirements: "Sample demo workflow for testing the client-admin lifecycle.",
-    };
+  const seedDemoProject = useCallback(async (scenario: DemoScenario) => {
+    void scenario;
+    await loadFromApi();
+  }, [loadFromApi]);
 
-    const projectMap: Record<DemoScenario, Project> = {
-      pending: projectBase,
-      quote: {
-        ...projectBase,
-        initialQuote: {
-          amount: 52000,
-          comment: "Demo quote has been sent to the client.",
-          sentAt: new Date().toISOString(),
-        },
-      },
-      negotiation: {
-        ...projectBase,
-        clientResponse: {
-          type: "REJECTED",
-          comment: "Client asked for a lower package amount.",
-          respondedAt: new Date().toISOString(),
-        },
-        negotiation: {
-          amount: 43000,
-          comment: "Revised package for the client to review.",
-          sentAt: new Date().toISOString(),
-        },
-      },
-      confirmed: {
-        ...projectBase,
-        initialQuote: {
-          amount: 61000,
-          comment: "Final package quote approved by the client.",
-          sentAt: new Date().toISOString(),
-        },
-        clientResponse: {
-          type: "ACCEPTED",
-          respondedAt: new Date().toISOString(),
-        },
-      },
-    };
-
-    const generatedProject = projectMap[scenario];
-    setProjects((current) => [generatedProject, ...current]);
-    setSelectedProjectId(generatedProject.id);
-  }, []);
-
-  const sendQuote = useCallback((projectId: string, amount: number, comment: string, advancePercent = 30) => {
+  const sendQuote = useCallback(async (projectId: string, amount: number, comment: string, advancePercent = 30) => {
     const safeAdvancePercent = Math.min(100, Math.max(0, Number(advancePercent) || 30));
-    const advanceAmount = Math.round((amount * safeAdvancePercent) / 100);
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/quote`, {
+      method: "PATCH",
+      body: JSON.stringify({ amount, comment, advancePercent: safeAdvancePercent }),
+    });
 
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        return {
-          ...project,
-          initialQuote: {
-            amount,
-            comment,
-            sentAt: new Date().toISOString(),
-            advancePercent: safeAdvancePercent,
-          },
-          payment: {
-            advancePercent: safeAdvancePercent,
-            amount: advanceAmount,
-            status: "PENDING",
-          },
-          clientResponse: undefined,
-          negotiation: undefined,
-          negotiationResponse: undefined,
-        };
-      }),
-    );
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
   const acceptClientRequest = useCallback((projectId: string) => {
