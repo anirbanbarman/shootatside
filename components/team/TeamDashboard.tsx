@@ -6,21 +6,25 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatDate, getProjectStatus } from "@/utils/status";
 import { getWhatsAppUrl } from "@/utils/notifications";
 
-export function TeamDashboard() {
-  const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage, markEventCompleted, logout } = useProjectContext();
+export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker" }) {
+  const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage, markEventCompleted } = useProjectContext();
   const [delayNotes, setDelayNotes] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
   const confirmedProjects = projects.filter((project) => getProjectStatus(project) === "PROJECT_CONFIRMED");
+  const today = new Date().toISOString().slice(0, 10);
+  const visibleProjects = mode === "tracker"
+    ? confirmedProjects.filter((project) => project.eventDate === today && project.eventTeam?.some((member) => member.memberEmail === currentUser?.email))
+    : confirmedProjects;
 
   return <div className="dashboard-shell">
     <section className="page-intro">
-      <div><p className="eyebrow">Team Portal</p><h2>Available Events</h2></div>
-      <div className="header-actions"><span className="pill">{confirmedProjects.length} confirmed events</span><button type="button" className="secondary-button" onClick={logout}>Log out</button></div>
+      <div><p className="eyebrow">Team Portal</p><h2>{mode === "tracker" ? "Event Tracker" : "Available Events"}</h2></div>
+      <div className="header-actions"><span className="pill">{mode === "tracker" ? `${visibleProjects.length} events today` : `${confirmedProjects.length} confirmed events`}</span></div>
     </section>
 
     <div className="panel">
-      {confirmedProjects.length === 0 ? <div className="empty-state">No client-confirmed events are available yet.</div> : <div className="team-event-list">
-        {confirmedProjects.map((project) => {
+      {visibleProjects.length === 0 ? <div className="empty-state">{mode === "tracker" ? "No assigned events have a tracker for today." : "No client-confirmed events are available yet."}</div> : <div className="team-event-list">
+        {visibleProjects.map((project) => {
           const interest = project.teamInterest?.find((item) => item.memberEmail === currentUser?.email);
           const isApprovedForMember = interest?.status === "ACCEPTED";
           const hasPendingInterest = interest?.status === "PENDING";

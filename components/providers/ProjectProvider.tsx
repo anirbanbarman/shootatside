@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { mockProjects } from "@/data/mockProjects";
-import { EDITING_ROLES, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
+import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
 import { getEditingMilestones } from "@/utils/notifications";
 
 type UserRole = "admin" | "client" | "team" | "editor";
@@ -57,6 +57,8 @@ interface ProjectContextValue {
     venue: string;
     requirements: string;
   }) => void;
+  acceptClientRequest: (projectId: string) => void;
+  submitClientContactDetails: (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => void;
   resetDemoProjects: () => void;
   seedDemoProject: (scenario: DemoScenario) => void;
   sendQuote: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
@@ -530,6 +532,22 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const acceptClientRequest = useCallback((projectId: string) => {
+    setProjects((current) => current.map((project) => project.id === projectId && !project.requestAcceptedAt
+      ? { ...project, requestAcceptedAt: new Date().toISOString() }
+      : project));
+  }, []);
+
+  const submitClientContactDetails = useCallback((projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => {
+    if (!currentUser || currentUser.role !== "client") return;
+
+    setProjects((current) => current.map((project) => project.id === projectId
+      && project.requestAcceptedAt
+      && project.client.email.toLowerCase() === currentUser.email.toLowerCase()
+      ? { ...project, clientContactDetails: { ...details, submittedAt: new Date().toISOString() } }
+      : project));
+  }, [currentUser]);
+
   const acceptQuote = useCallback((projectId: string) => {
     setProjects((current) =>
       current.map((project) => {
@@ -887,6 +905,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       selectedProjectId,
       setSelectedProjectId,
       createProjectRequest,
+      acceptClientRequest,
+      submitClientContactDetails,
       resetDemoProjects,
       seedDemoProject,
       sendQuote,
@@ -916,7 +936,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateEditingMilestone,
       deliverEditedFiles,
     }),
-    [acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
+    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

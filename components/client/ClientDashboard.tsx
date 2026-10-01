@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
 import { Modal } from "@/components/common/Modal";
 import { ProjectTable } from "@/components/common/ProjectTable";
@@ -11,9 +11,11 @@ import { EditingChat } from "@/components/common/EditingChat";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatCurrency, formatDate } from "@/utils/status";
 import { getEditingMilestones, getEditingProgress } from "@/utils/notifications";
+import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 
 export function ClientDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief, submitClientContactDetails } = useProjectContext();
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isRequestFormModalOpen, setRequestFormModalOpen] = useState(false);
@@ -26,6 +28,7 @@ export function ClientDashboard() {
   const [isTimelineOpen, setTimelineOpen] = useState(false);
   const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [teamBrief, setTeamBrief] = useState({ callTime: "", callVenue: "" });
+  const [contactForm, setContactForm] = useState({ phone: "", email: "", preferredContact: "PHONE" as "PHONE" | "EMAIL" | "WHATSAPP", bestTimeToContact: "", message: "" });
 
   const clientProjects = useMemo(() => projects.filter((project) => project.client.email.includes("@") && project.client.phone), [projects]);
 
@@ -55,6 +58,17 @@ export function ClientDashboard() {
   const handleProjectSelect = (projectId: string) => {
     setSelectedProjectId(projectId);
     setProjectDetailsOpen(true);
+  };
+
+  const handleContactFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const details = {
+      ...contactForm,
+      phone: contactForm.phone.trim() || selectedProject.client.phone,
+      email: contactForm.email.trim() || selectedProject.client.email,
+    };
+    if (!details.phone.trim() || !details.email.trim() || !details.bestTimeToContact.trim()) return;
+    submitClientContactDetails(selectedProject.id, details);
   };
 
   const handleAcceptQuote = () => {
@@ -125,6 +139,26 @@ export function ClientDashboard() {
 
       <Modal title={`Project Details · ${selectedProject.client.name} · ${selectedProject.eventType}`} open={isProjectDetailsOpen} onClose={() => setProjectDetailsOpen(false)} className="project-details-modal">
         <div className="client-project-modal-content">
+          {selectedProject.requestAcceptedAt ? <section className="section-block client-contact-request">
+            <Typography variant="h6" component="h3">Contact Details</Typography>
+            {selectedProject.clientContactDetails ? <Alert severity="success">Contact form sent. The studio will contact you using your preferred method.</Alert> : <>
+              <Alert severity="info">Your request was accepted by the studio. Please confirm how and when they should contact you.</Alert>
+              <Box component="form" onSubmit={handleContactFormSubmit}>
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                    <TextField fullWidth required label="Phone number" type="tel" value={contactForm.phone || selectedProject.client.phone} onChange={(event) => setContactForm((current) => ({ ...current, phone: event.target.value }))} />
+                    <TextField fullWidth required label="Email address" type="email" value={contactForm.email || selectedProject.client.email} onChange={(event) => setContactForm((current) => ({ ...current, email: event.target.value }))} />
+                  </Stack>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                    <FormControl fullWidth><InputLabel id="contact-method-label">Preferred contact method</InputLabel><Select labelId="contact-method-label" label="Preferred contact method" value={contactForm.preferredContact} onChange={(event) => setContactForm((current) => ({ ...current, preferredContact: event.target.value as typeof current.preferredContact }))}><MenuItem value="PHONE">Phone</MenuItem><MenuItem value="EMAIL">Email</MenuItem><MenuItem value="WHATSAPP">WhatsApp</MenuItem></Select></FormControl>
+                    <TextField fullWidth required label="Best time to contact" placeholder="e.g. 10:00 AM–1:00 PM" value={contactForm.bestTimeToContact} onChange={(event) => setContactForm((current) => ({ ...current, bestTimeToContact: event.target.value }))} />
+                  </Stack>
+                  <TextField fullWidth multiline minRows={3} label="Message for the studio (optional)" value={contactForm.message} onChange={(event) => setContactForm((current) => ({ ...current, message: event.target.value }))} />
+                  <Box><Button type="submit" variant="contained" startIcon={<SendOutlinedIcon />}>Send Contact Details</Button></Box>
+                </Stack>
+              </Box>
+            </>}
+          </section> : null}
           <div className="panel-header space-between">
             <h3>Overview &amp; Status</h3>
             <div className="detail-actions">

@@ -12,12 +12,13 @@ Main screens:
 - `/admin`: admin login, project management, team management, hierarchy builder, and live tracker.
 - `/client`: client project portal, team call details, and assigned leader contact.
 
-Admin Team Management sections are URL-addressable through the `section` query parameter, so refresh and browser navigation preserve the selected section:
+Admin Team Management sections are separate routes in the sidebar, so refresh and browser navigation preserve the selected section:
 
-- `/admin?section=registrations`
-- `/admin?section=interests`
-- `/admin?section=hierarchy-builder`
-- `/admin?section=live-tracker`
+- `/admin/team/registrations`
+- `/admin/team/interests`
+- `/admin/team/hierarchy`
+- `/admin/team/live-tracker`
+- `/admin/editing`
 
 The admin sidebar also provides an explicit logout action. The team portal has its own logout action.
 
@@ -39,12 +40,13 @@ The main portals remain separate routes:
 - `/client`
 - `/team`
 
-Admin Team Management subsections are route-addressable with query parameters so each section can be refreshed or linked directly:
+Admin Team Management subsections are route-addressable so each section can be refreshed or linked directly:
 
-- `/admin?section=registrations`
-- `/admin?section=interests`
-- `/admin?section=hierarchy-builder`
-- `/admin?section=live-tracker`
+- `/admin/team/registrations`
+- `/admin/team/interests`
+- `/admin/team/hierarchy`
+- `/admin/team/live-tracker`
+- `/admin/editing`
 
 ## Session Switching
 

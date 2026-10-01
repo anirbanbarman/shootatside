@@ -19,6 +19,17 @@ export interface Client {
   phone: string;
 }
 
+export type ContactPreference = "PHONE" | "EMAIL" | "WHATSAPP";
+
+export interface ClientContactDetails {
+  phone: string;
+  email: string;
+  preferredContact: ContactPreference;
+  bestTimeToContact: string;
+  message?: string;
+  submittedAt: string;
+}
+
 export interface Quote {
   amount: number;
   comment: string;
@@ -213,6 +224,8 @@ export interface Project {
   eventDate: string;
   venue: string;
   requirements: string;
+  requestAcceptedAt?: string;
+  clientContactDetails?: ClientContactDetails;
   initialQuote?: Quote;
   clientResponse?: ClientResponse;
   negotiation?: Negotiation;

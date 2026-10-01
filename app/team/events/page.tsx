@@ -1,5 +1,5 @@
 import { TeamPortalPage } from "@/components/team/TeamPortalPage";
 
-export default function TeamPage() {
+export default function TeamEventsPage() {
   return <TeamPortalPage mode="events" />;
 }

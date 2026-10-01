@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
 import { EditorManagementPanel } from "@/components/admin/EditorManagementPanel";
 import { Box, Typography } from "@mui/material";
+import { Alert, Button, Chip, Stack } from "@mui/material";
+import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -73,12 +75,30 @@ function TeamHierarchyBuilder() {
 }
 
 export function TeamManagementPanel() {
-  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
-  const activeSubsection = (searchParams.get("section") as "registrations" | "interests" | "hierarchy" | "hierarchy-builder" | "live-tracker" | null) ?? "registrations";
-  const setActiveSubsection = (section: "registrations" | "interests" | "hierarchy-builder" | "live-tracker") => router.replace(`/admin/team?section=${section}`);
+  const sectionFromPath = pathname.startsWith("/admin/team/") ? pathname.split("/").at(-1) : null;
+  const sectionFromQuery = searchParams.get("section");
+  const activeSubsection = sectionFromPath === "hierarchy"
+    ? "hierarchy-builder"
+    : sectionFromPath === "live-tracker"
+      ? "live-tracker"
+      : sectionFromPath === "interests"
+        ? "interests"
+        : sectionFromPath === "registrations"
+          ? "registrations"
+          : sectionFromQuery === "interests" || sectionFromQuery === "hierarchy" || sectionFromQuery === "live-tracker"
+            ? sectionFromQuery
+            : "registrations";
+      const sectionHeading = activeSubsection === "registrations"
+        ? "Team Registrations"
+        : activeSubsection === "interests"
+          ? "Team Interest Requests"
+          : activeSubsection === "live-tracker"
+            ? "Live Event Tracker"
+            : "Team Builder";
   const [interestDate, setInterestDate] = useState("");
   const [hierarchyDate, setHierarchyDate] = useState("");
   const [openTeamEventId, setOpenTeamEventId] = useState<string | null>(null);
@@ -92,17 +112,10 @@ export function TeamManagementPanel() {
       <section className="page-intro">
         <div>
           <p className="eyebrow">Admin Portal</p>
-          <h2>Team Management</h2>
+          <h2>{sectionHeading}</h2>
         </div>
         <span className="pill">{requests.length} interest requests</span>
       </section>
-
-      <div className="team-submenu" aria-label="Team management sections">
-        <button type="button" className={activeSubsection === "registrations" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("registrations")}><span aria-hidden="true">♙</span>Team Registration</button>
-        <button type="button" className={activeSubsection === "interests" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("interests")}><span aria-hidden="true">♡</span>Interest Requests</button>
-        <button type="button" className={activeSubsection === "hierarchy-builder" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("hierarchy-builder")}><span aria-hidden="true">⌘</span>Team Hierarchy</button>
-        <button type="button" className={activeSubsection === "live-tracker" ? "admin-nav-button active" : "admin-nav-button"} onClick={() => setActiveSubsection("live-tracker")}><span aria-hidden="true">◷</span>Live Event Tracker</button>
-      </div>
 
       {activeSubsection === "registrations" ? <div className="panel">
         <div className="panel-header">
@@ -217,7 +230,7 @@ export function TeamManagementPanel() {
 
 export function AdminDashboard() {
   const searchParams = useSearchParams();
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
@@ -330,7 +343,7 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      {completedEventsAwaitingEditors > 0 ? <div className="success-box admin-completion-notice"><strong>{completedEventsAwaitingEditors} event{completedEventsAwaitingEditors === 1 ? "" : "s"} completed.</strong> Review editor interest and assign post-production work. <a href="/admin?section=editing">Open Editor Management →</a></div> : null}
+      {completedEventsAwaitingEditors > 0 ? <div className="success-box admin-completion-notice"><strong>{completedEventsAwaitingEditors} event{completedEventsAwaitingEditors === 1 ? "" : "s"} completed.</strong> Review editor interest and assign post-production work. <a href="/admin/editing">Open Editor Management →</a></div> : null}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -366,6 +379,10 @@ export function AdminDashboard() {
           <div className="detail-card admin-project-detail-card">
             <div className="section-block">
               <p className="eyebrow">Client Information</p>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 1, alignItems: { sm: "center" } }}>
+                {selectedProject.requestAcceptedAt ? <Chip color="success" icon={<MarkEmailReadOutlinedIcon />} label={`Request accepted · ${new Date(selectedProject.requestAcceptedAt).toLocaleString()}`} /> : <Button variant="contained" startIcon={<MarkEmailReadOutlinedIcon />} onClick={() => acceptClientRequest(selectedProject.id)}>Accept Request &amp; Send Contact Form</Button>}
+              </Stack>
+              {selectedProject.clientContactDetails ? <Alert severity="success" sx={{ mb: 1 }}><strong>Client contact form received</strong><br />Preferred contact: {selectedProject.clientContactDetails.preferredContact} · Best time: {selectedProject.clientContactDetails.bestTimeToContact}<br />Phone: {selectedProject.clientContactDetails.phone} · Email: {selectedProject.clientContactDetails.email}{selectedProject.clientContactDetails.message ? <><br />Message: {selectedProject.clientContactDetails.message}</> : null}</Alert> : selectedProject.requestAcceptedAt ? <Alert severity="info" sx={{ mb: 1 }}>The client contact form is now available in the Client Portal.</Alert> : null}
               <div className="field-grid">
                 <div><label>Client Name</label><p>{selectedProject.client.name}</p></div>
                 <div><label>Email</label><p>{selectedProject.client.email}</p></div>
