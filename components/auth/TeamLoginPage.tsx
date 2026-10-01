@@ -39,12 +39,8 @@ export function TeamLoginPage() {
   };
 
   return (
-    <div className="role-login-shell">
+    <div className="role-login-shell team-login-shell">
       <div className="role-login-container team-surface">
-        <Link href="/" className="back-link">
-          ← Back
-        </Link>
-
         <div className="role-login-header team-header">
           <div className="role-icon">👥</div>
           <h1>Team Access</h1>
@@ -86,6 +82,10 @@ export function TeamLoginPage() {
           <button type="button" className="primary-button full-width" onClick={handleLogin}>
             Login to Team Portal
           </button>
+
+          <Link href="/editor" className="secondary-button full-width editor-link-button">
+            Open Editor Workspace
+          </Link>
 
           <button type="button" className="secondary-button full-width" onClick={() => setShowRegistration(true)}>Register as Team Member</button>
           </>}

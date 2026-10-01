@@ -120,6 +120,25 @@ export interface EditorAccount {
   createdAt: string;
 }
 
+export type EditorApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface EditorApplication {
+  id: string;
+  name: string;
+  mobile: string;
+  whatsapp: string;
+  email: string;
+  address: string;
+  phonePe: string;
+  aadharFileName: string;
+  aadharDataUrl: string;
+  selfieFileName: string;
+  selfieDataUrl: string;
+  editingRoles: EditingRole[];
+  submittedAt: string;
+  status: EditorApplicationStatus;
+}
+
 export const EDITING_ROLES = ["Video Editor", "Still Photo Editor", "Album Editor"] as const;
 export type EditingRole = (typeof EDITING_ROLES)[number];
 
@@ -200,9 +219,6 @@ export const TEAM_MEMBER_ROLES = [
   "Live Video",
   "Sound Operator",
   "Driver",
-  "Video Editor",
-  "Still Photo Editor",
-  "Album Editor",
 ] as const;
 
 // Keep the old value in the type for existing saved assignments; it is not a selectable duty role.

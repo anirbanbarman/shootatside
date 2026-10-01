@@ -20,7 +20,7 @@ export function TeamRegistrationForm({ onComplete }: { onComplete: () => void })
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (Object.values(form).some((value) => !value.trim()) || !aadharFileName || !selfieFileName || preferredRoles.length === 0) {
-      setError("Please complete every field, select both files, and choose at least one preferred role.");
+      setError("Please complete every field, select both files, and choose at least one team role.");
       return;
     }
 
@@ -48,7 +48,7 @@ export function TeamRegistrationForm({ onComplete }: { onComplete: () => void })
       </div>
       {error ? <div className="error-box">{error}</div> : null}
       <button type="submit" className="primary-button full-width">Submit Registration</button>
-      <p className="form-note">Files are captured for this demo and visible to the admin as file names.</p>
+      <p className="form-note">ID and selfie images are stored with your application for admin review.</p>
     </form>
   );
 }

@@ -348,27 +348,49 @@ button {
 .stats-grid {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
 
-.stat {
+.stat-card {
+  display: grid;
+  gap: 12px;
   padding: 18px 16px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
 }
 
-.stat strong {
+.stat-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(199, 161, 106, 0.15);
+  font-size: 1.2rem;
+}
+
+.stat-card strong {
   display: block;
   font-size: 2rem;
   letter-spacing: -0.06em;
 }
 
-.stat span {
+.stat-label {
   display: block;
-  margin-top: 6px;
-  color: rgba(17, 24, 39, 0.7);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(17, 24, 39, 0.72);
+  font-weight: 700;
 }
 
 .services-grid,
@@ -727,6 +749,44 @@ button {
   border: 1px solid rgba(29, 143, 95, 0.18);
 }
 
+.pill.success,
+.pill[data-status="APPROVED"],
+.pill[data-status="ACCEPTED"] {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid rgba(29, 143, 95, 0.18);
+}
+
+.pill.danger,
+.pill[data-status="REJECTED"] {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(214, 77, 77, 0.18);
+}
+
+.pill.neutral,
+.pill[data-status="PENDING"] {
+  background: rgba(17, 24, 39, 0.06);
+  color: #374151;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+}
+
+.editor-application-photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.editor-application-photos img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: #fff;
+}
+
 .request-panel {
   padding: 26px 28px;
 }
@@ -1029,28 +1089,60 @@ button {
   display: grid;
   place-items: center;
   padding: 32px 18px;
-  background: radial-gradient(circle at top left, rgba(199, 161, 106, 0.14), transparent 30%), linear-gradient(135deg, #f8f6f2 0%, #f0ece5 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.admin-login-shell {
+  background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.63), rgba(17, 24, 39, 0.42)),
+    url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80");
+}
+
+.client-login-shell {
+  background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.58), rgba(17, 24, 39, 0.38)),
+    url("https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1600&q=80");
+}
+
+.team-login-shell {
+  background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.6), rgba(17, 24, 39, 0.4)),
+    url("https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1600&q=80");
+}
+
+.editor-login-shell {
+  background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.64), rgba(17, 24, 39, 0.42)),
+    url("https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1600&q=80");
 }
 
 .role-login-container {
+  position: relative;
   width: min(560px, 100%);
   padding: 28px 24px 22px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 26px 60px rgba(17, 24, 39, 0.12);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 26px 60px rgba(17, 24, 39, 0.18);
+  backdrop-filter: blur(8px);
 }
 
 .admin-surface {
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9));
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(248,250,252,0.88)),
+    url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80");
+  background-size: cover;
+  background-position: center;
 }
 
 .client-surface {
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,249,240,0.9));
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,249,240,0.88)),
+    url("https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1200&q=80");
+  background-size: cover;
+  background-position: center;
 }
 
 .team-surface {
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(239,246,255,0.9));
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(239,246,255,0.9)),
+    url("https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80");
+  background-size: cover;
+  background-position: center;
 }
 
 .back-link {
@@ -1188,6 +1280,75 @@ button {
   border: 1px solid rgba(17, 24, 39, 0.06);
 }
 
+.editor-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.editor-auth-card {
+  width: min(760px, 100%);
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(17, 24, 39, 0.08) !important;
+  box-shadow: 0 28px 60px rgba(17, 24, 39, 0.12) !important;
+}
+
+.editor-auth-card .MuiCardContent-root {
+  padding: 24px !important;
+}
+
+.editor-application-form,
+.editor-signin-form {
+  display: grid;
+  gap: 18px;
+}
+
+.editor-upload-row {
+  margin-top: 6px !important;
+}
+
+.editor-upload-field {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.editor-upload-preview {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: #fff;
+}
+
+.editor-specialty-fieldset {
+  margin: 0;
+  padding: 14px 16px 8px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.editor-specialty-fieldset legend {
+  padding: 0 8px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.editor-auth-avatar {
+  width: 68px !important;
+  height: 68px !important;
+  background: linear-gradient(135deg, #d7b67d 0%, #a7834d 100%) !important;
+  margin-bottom: 12px !important;
+}
+
 .demo-note strong {
   display: block;
   margin-bottom: 6px;
@@ -1215,6 +1376,10 @@ button {
 
   .client-request-form {
     max-height: 75vh;
+  }
+
+  .editor-application-photos {
+    grid-template-columns: 1fr;
   }
 }
 

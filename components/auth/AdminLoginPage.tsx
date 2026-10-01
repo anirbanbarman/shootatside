@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -40,12 +39,8 @@ export function AdminLoginPage() {
   };
 
   return (
-    <div className="role-login-shell">
+    <div className="role-login-shell admin-login-shell">
       <div className="role-login-container admin-surface">
-        <Link href="/" className="back-link">
-          ← Back
-        </Link>
-
         <div className="role-login-header admin-header">
           <div className="role-icon">🔐</div>
           <h1>Admin Panel</h1>

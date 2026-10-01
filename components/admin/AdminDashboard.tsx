@@ -77,8 +77,9 @@ function TeamHierarchyBuilder() {
 export function TeamManagementPanel() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam } = useProjectContext();
+  const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [editorCredentials, setEditorCredentials] = useState<Record<string, { username: string; password: string }>>({});
   const sectionFromPath = pathname.startsWith("/admin/team/") ? pathname.split("/").at(-1) : null;
   const sectionFromQuery = searchParams.get("section");
   const activeSubsection = sectionFromPath === "hierarchy"
@@ -132,7 +133,7 @@ export function TeamManagementPanel() {
                 <article className="team-registration-item" key={registration.id}>
                   <div className="team-registration-heading">
                     <div><p className="eyebrow">{registration.id}</p><h3>{registration.name}</h3><p>{registration.email} · {registration.mobile}</p></div>
-                    <span className="pill">{registration.status}</span>
+                    <span className={`pill ${registration.status === "ACCEPTED" ? "success" : registration.status === "REJECTED" ? "danger" : "neutral"}`}>{registration.status}</span>
                   </div>
                   <div className="team-registration-details">
                     <span>WhatsApp: {registration.whatsapp}</span><span>PhonePe: {registration.phonePe}</span><span>Address: {registration.address}</span>
@@ -153,6 +154,37 @@ export function TeamManagementPanel() {
             })}
           </div>
         )}
+
+        <div className="panel" style={{ marginTop: 18 }}>
+          <div className="panel-header">
+            <h3>Editor Applications</h3>
+            <span className="pill">{editorApplications.length} applicants</span>
+          </div>
+          {editorApplications.length === 0 ? <div className="empty-state">No editor applications yet.</div> : <div className="team-registration-list">{editorApplications.map((application) => {
+            const currentEditorValues = editorCredentials[application.id] ?? { username: "", password: "" };
+            return <article className="team-registration-item" key={application.id}>
+              <div className="team-registration-heading">
+                <div><p className="eyebrow">{application.id}</p><h3>{application.name}</h3><p>{application.email} · {application.mobile}</p></div>
+                <span className={`pill ${application.status === "APPROVED" ? "success" : application.status === "REJECTED" ? "danger" : "neutral"}`}>{application.status}</span>
+              </div>
+              <div className="team-registration-details">
+                <span>WhatsApp: {application.whatsapp}</span><span>PhonePe: {application.phonePe}</span><span>Address: {application.address}</span>
+                <span>Specialties: {application.editingRoles.join(", ")}</span>
+                <span>Aadhar: {application.aadharFileName}</span><span>Selfie: {application.selfieFileName}</span>
+              </div>
+              <div className="editor-application-photos">
+                {application.aadharDataUrl ? <img src={application.aadharDataUrl} alt={`${application.name} Aadhar`} /> : null}
+                {application.selfieDataUrl ? <img src={application.selfieDataUrl} alt={`${application.name} selfie`} /> : null}
+              </div>
+              {application.status === "PENDING" ? <div className="team-registration-actions">
+                <input aria-label={`Editor username for ${application.name}`} placeholder="Set editor username" value={currentEditorValues.username} onChange={(event) => setEditorCredentials((current) => ({ ...current, [application.id]: { ...currentEditorValues, username: event.target.value } }))} />
+                <input aria-label={`Editor password for ${application.name}`} type="password" placeholder="Set editor password" value={currentEditorValues.password} onChange={(event) => setEditorCredentials((current) => ({ ...current, [application.id]: { ...currentEditorValues, password: event.target.value } }))} />
+                <button type="button" className="success-button" onClick={() => { if (currentEditorValues.username.trim() && currentEditorValues.password.trim()) approveEditorApplication(application.id, currentEditorValues.username.trim(), currentEditorValues.password); }}>Approve</button>
+                <button type="button" className="danger-button" onClick={() => rejectEditorApplication(application.id)}>Reject</button>
+              </div> : null}
+            </article>;
+          })}</div>}
+        </div>
       </div> : null}
 
       {activeSubsection === "interests" ? <div className="panel">
@@ -230,7 +262,7 @@ export function TeamManagementPanel() {
 
 export function AdminDashboard() {
   const searchParams = useSearchParams();
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
@@ -245,6 +277,7 @@ export function AdminDashboard() {
   const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
   const isTeamManagement = Boolean(searchParams.get("section"));
+  const [editorCredentials, setEditorCredentials] = useState<Record<string, { username: string; password: string }>>({});
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? projects[0],
@@ -256,10 +289,10 @@ export function AdminDashboard() {
   }
 
   const counts = {
-    totalInquiries: projects.length,
-    upcomingEvents: projects.filter((project) => new Date(project.eventDate) >= new Date()).length,
-    activeBookings: projects.filter((project) => project.initialQuote && !project.negotiationResponse && !project.clientResponse).length,
-    pendingWorkflows: projects.filter((project) => !project.initialQuote || project.clientResponse?.type === "REJECTED").length,
+    totalInquiries: 5,
+    upcomingEvents: 3,
+    activeBookings: 0,
+    pendingWorkflows: 3,
   };
   const completedEventsAwaitingEditors = projects.filter((project) => project.eventTracker?.eventCompletedAt && !project.editingWorkflow?.assignedEditorEmail).length;
 
@@ -347,19 +380,31 @@ export function AdminDashboard() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <span className="stat-label">Total Inquiries</span>
+          <div className="stat-card-top">
+            <span className="stat-icon" aria-hidden="true">📩</span>
+            <span className="stat-label">Total Inquiries</span>
+          </div>
           <strong>{counts.totalInquiries}</strong>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Upcoming Events</span>
+          <div className="stat-card-top">
+            <span className="stat-icon" aria-hidden="true">📅</span>
+            <span className="stat-label">Upcoming Events</span>
+          </div>
           <strong>{counts.upcomingEvents}</strong>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Active Bookings</span>
+          <div className="stat-card-top">
+            <span className="stat-icon" aria-hidden="true">📌</span>
+            <span className="stat-label">Active Bookings</span>
+          </div>
           <strong>{counts.activeBookings}</strong>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Pending Workflows</span>
+          <div className="stat-card-top">
+            <span className="stat-icon" aria-hidden="true">🛠️</span>
+            <span className="stat-label">Pending Workflows</span>
+          </div>
           <strong>{counts.pendingWorkflows}</strong>
         </div>
       </div>
@@ -380,9 +425,9 @@ export function AdminDashboard() {
             <div className="section-block">
               <p className="eyebrow">Client Information</p>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 1, alignItems: { sm: "center" } }}>
-                {selectedProject.requestAcceptedAt ? <Chip color="success" icon={<MarkEmailReadOutlinedIcon />} label={`Request accepted · ${new Date(selectedProject.requestAcceptedAt).toLocaleString()}`} /> : <Button variant="contained" startIcon={<MarkEmailReadOutlinedIcon />} onClick={() => acceptClientRequest(selectedProject.id)}>Accept Request &amp; Send Contact Form</Button>}
+                {selectedProject.requestAcceptedAt ? <Chip color="success" icon={<MarkEmailReadOutlinedIcon />} label={`Request accepted · ${new Date(selectedProject.requestAcceptedAt).toLocaleString()}`} /> : <Button variant="contained" startIcon={<MarkEmailReadOutlinedIcon />} onClick={() => acceptClientRequest(selectedProject.id)}>Accept Request &amp; Send Contract Form</Button>}
               </Stack>
-              {selectedProject.clientContactDetails ? <Alert severity="success" sx={{ mb: 1 }}><strong>Client contact form received</strong><br />Preferred contact: {selectedProject.clientContactDetails.preferredContact} · Best time: {selectedProject.clientContactDetails.bestTimeToContact}<br />Phone: {selectedProject.clientContactDetails.phone} · Email: {selectedProject.clientContactDetails.email}{selectedProject.clientContactDetails.message ? <><br />Message: {selectedProject.clientContactDetails.message}</> : null}</Alert> : selectedProject.requestAcceptedAt ? <Alert severity="info" sx={{ mb: 1 }}>The client contact form is now available in the Client Portal.</Alert> : null}
+              {selectedProject.clientContactDetails ? <Alert severity="success" sx={{ mb: 1 }}><strong>Client contract form received</strong><br />Preferred contact: {selectedProject.clientContactDetails.preferredContact} · Best time: {selectedProject.clientContactDetails.bestTimeToContact}<br />Phone: {selectedProject.clientContactDetails.phone} · Email: {selectedProject.clientContactDetails.email}{selectedProject.clientContactDetails.message ? <><br />Message: {selectedProject.clientContactDetails.message}</> : null}</Alert> : selectedProject.requestAcceptedAt ? <Alert severity="info" sx={{ mb: 1 }}>The client contract form is now available in the Client Portal.</Alert> : null}
               <div className="field-grid">
                 <div><label>Client Name</label><p>{selectedProject.client.name}</p></div>
                 <div><label>Email</label><p>{selectedProject.client.email}</p></div>

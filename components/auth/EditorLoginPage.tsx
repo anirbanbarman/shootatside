@@ -2,71 +2,122 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Alert, Avatar, Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, TextField, Typography } from "@mui/material";
+import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
+import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { EDITING_ROLES, type EditingRole } from "@/types/project";
 
+type EditorApplicationForm = {
+  name: string;
+  mobile: string;
+  whatsapp: string;
+  email: string;
+  address: string;
+  phonePe: string;
+  aadharFileName: string;
+  aadharDataUrl: string;
+  selfieFileName: string;
+  selfieDataUrl: string;
+};
+
+const emptyApplication: EditorApplicationForm = {
+  name: "", mobile: "", whatsapp: "", email: "", address: "", phonePe: "",
+  aadharFileName: "", aadharDataUrl: "", selfieFileName: "", selfieDataUrl: "",
+};
+
 export function EditorLoginPage() {
   const router = useRouter();
-  const { loginEditor, createEditor } = useProjectContext();
+  const { loginEditor, submitEditorApplication } = useProjectContext();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [registration, setRegistration] = useState({ name: "", email: "", phone: "", username: "", password: "" });
+  const [application, setApplication] = useState(emptyApplication);
   const [editingRoles, setEditingRoles] = useState<EditingRole[]>([]);
-  const [showRegistration, setShowRegistration] = useState(false);
-  const [registered, setRegistered] = useState(false);
+  const [showApplication, setShowApplication] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  const updatePhoto = (field: "aadhar" | "selfie") => (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1_500_000) {
+      setError("Please choose an image or PDF smaller than 1.5 MB so it can be saved for admin review.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setApplication((current) => field === "aadhar"
+      ? { ...current, aadharFileName: file.name, aadharDataUrl: String(reader.result ?? "") }
+      : { ...current, selfieFileName: file.name, selfieDataUrl: String(reader.result ?? "") });
+    reader.readAsDataURL(file);
+    setError("");
+  };
 
   const handleLogin = () => {
     if (!loginEditor(username, password)) {
-      setError("Editor login was not found. Register an editor account or check your credentials.");
+      setError("Editor login was not found. Approved editor applications can sign in with the credentials set by admin.");
       return;
     }
     router.replace("/editor");
   };
 
-  const handleRegistration = (event: FormEvent<HTMLFormElement>) => {
+  const handleApplicationSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (Object.values(registration).some((value) => !value.trim()) || editingRoles.length === 0) {
-      setError("Complete all fields and choose at least one editing specialty.");
+    if (Object.values(application).some((value) => !value.trim()) || editingRoles.length === 0) {
+      setError("Complete all fields, upload both images, and select at least one editing specialty.");
       return;
     }
-
-    const created = createEditor({ ...registration, email: registration.email.trim().toLowerCase(), editingRoles });
-    if (!created) {
-      setError("An editor account already exists with that email or username.");
+    const accepted = submitEditorApplication({ ...application, editingRoles });
+    if (!accepted) {
+      setError("An application or editor account already exists for this email, or the required fields are missing.");
       return;
     }
-    setRegistered(true);
+    setSubmitted(true);
     setError("");
   };
 
-  return <div className="role-login-shell"><div className="role-login-container team-surface">
-    <Link href="/" className="back-link">← Back</Link>
-    <div className="role-login-header team-header"><div className="role-icon">✂</div><h1>Editor Workspace</h1><p>Register your editing specialties. Admin will assign completed event work directly.</p></div>
-    <div className="role-login-form">
-      {showRegistration ? registered ? <>
-        <div className="success-box">Editor registration complete. Sign in to see work assigned to you by admin.</div>
-        <button type="button" className="primary-button full-width" onClick={() => { setShowRegistration(false); setRegistered(false); }}>Continue to Sign In</button>
-      </> : <form className="form-stack" onSubmit={handleRegistration}>
-        <h2>Editor Registration</h2>
-        <div className="form-group"><label htmlFor="editor-register-name">Full Name</label><input id="editor-register-name" required value={registration.name} onChange={(event) => setRegistration((current) => ({ ...current, name: event.target.value }))} /></div>
-        <div className="form-group"><label htmlFor="editor-register-email">Email</label><input id="editor-register-email" type="email" required value={registration.email} onChange={(event) => setRegistration((current) => ({ ...current, email: event.target.value }))} /></div>
-        <div className="form-group"><label htmlFor="editor-register-phone">Phone</label><input id="editor-register-phone" type="tel" required value={registration.phone} onChange={(event) => setRegistration((current) => ({ ...current, phone: event.target.value }))} /></div>
-        <div className="form-group"><label htmlFor="editor-register-username">Username</label><input id="editor-register-username" required value={registration.username} onChange={(event) => setRegistration((current) => ({ ...current, username: event.target.value }))} /></div>
-        <div className="form-group"><label htmlFor="editor-register-password">Password</label><input id="editor-register-password" type="password" required value={registration.password} onChange={(event) => setRegistration((current) => ({ ...current, password: event.target.value }))} /></div>
-        <fieldset className="form-group full role-checkbox-fieldset"><legend>Editing specialties</legend><div className="role-checkbox-grid">{EDITING_ROLES.map((role) => <label className="check-item" key={role}><input type="checkbox" checked={editingRoles.includes(role)} onChange={() => setEditingRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role])} />{role}</label>)}</div></fieldset>
-        {error ? <div className="error-box">{error}</div> : null}
-        <button type="submit" className="primary-button full-width">Create Editor Account</button>
-        <button type="button" className="secondary-button full-width" onClick={() => { setShowRegistration(false); setError(""); }}>Back to Sign In</button>
-      </form> : <>
-        <div className="form-group"><label htmlFor="editor-username">Username</label><input id="editor-username" value={username} onChange={(event) => setUsername(event.target.value)} /></div>
-        <div className="form-group"><label htmlFor="editor-password">Password</label><input id="editor-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></div>
-        {error ? <div className="error-box">{error}</div> : null}
-        <button type="button" className="primary-button full-width" onClick={handleLogin}>Sign in to Editor Dashboard</button>
-        <button type="button" className="secondary-button full-width" onClick={() => { setShowRegistration(true); setError(""); }}>Register as an Editor</button>
-      </>}
-    </div>
-  </div></div>;
+  return <Box className="role-login-shell editor-login-shell">
+    <Card variant="outlined" className="editor-auth-card">
+      <CardContent>
+        <Box className="role-login-header team-header">
+          <Avatar className="editor-auth-avatar"><PhotoCameraOutlinedIcon /></Avatar>
+          <Typography variant="h4" component="h1">Editor Workspace</Typography>
+          <Typography color="text.secondary">Apply with your editing specialties. Admin reviews your profile and sets your sign-in credentials.</Typography>
+        </Box>
+
+        {showApplication ? submitted ? <Stack spacing={2}>
+          <Alert severity="success">Application submitted. Admin will review your contact details, images, and specialties, then provide sign-in credentials if approved.</Alert>
+          <Button variant="contained" onClick={() => { setShowApplication(false); setSubmitted(false); }}>Back to editor sign in</Button>
+        </Stack> : <Box component="form" onSubmit={handleApplicationSubmit} className="editor-application-form">
+          <Typography variant="h6" component="h2">Editor Application</Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField required fullWidth label="Full name" value={application.name} onChange={(event) => setApplication((current) => ({ ...current, name: event.target.value }))} />
+            <TextField required fullWidth label="Mobile number" type="tel" value={application.mobile} onChange={(event) => setApplication((current) => ({ ...current, mobile: event.target.value }))} />
+          </Stack>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField required fullWidth label="WhatsApp number" type="tel" value={application.whatsapp} onChange={(event) => setApplication((current) => ({ ...current, whatsapp: event.target.value }))} />
+            <TextField required fullWidth label="Email address" type="email" value={application.email} onChange={(event) => setApplication((current) => ({ ...current, email: event.target.value }))} />
+          </Stack>
+          <TextField required fullWidth multiline minRows={2} label="Address" value={application.address} onChange={(event) => setApplication((current) => ({ ...current, address: event.target.value }))} />
+          <TextField required fullWidth label="PhonePe number" type="tel" value={application.phonePe} onChange={(event) => setApplication((current) => ({ ...current, phonePe: event.target.value }))} />
+          <Stack className="editor-upload-row" direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <Box className="editor-upload-field"><Button variant="outlined" component="label" fullWidth>{application.aadharFileName || "Upload Aadhar / ID image"}<input hidden type="file" accept="image/*,.pdf" onChange={updatePhoto("aadhar")} /></Button>{application.aadharDataUrl.startsWith("data:image/") ? <img className="editor-upload-preview" src={application.aadharDataUrl} alt="ID document preview" /> : null}</Box>
+            <Box className="editor-upload-field"><Button variant="outlined" component="label" fullWidth>{application.selfieFileName || "Upload selfie"}<input hidden type="file" accept="image/*" onChange={updatePhoto("selfie")} /></Button>{application.selfieDataUrl ? <img className="editor-upload-preview" src={application.selfieDataUrl} alt="Selfie preview" /> : null}</Box>
+          </Stack>
+          <fieldset className="editor-specialty-fieldset"><legend>Editing specialties</legend><Stack direction={{ xs: "column", sm: "row" }} sx={{ flexWrap: "wrap", gap: 1 }}>{EDITING_ROLES.map((role) => <FormControlLabel key={role} control={<Checkbox checked={editingRoles.includes(role)} onChange={() => setEditingRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role])} />} label={role} />)}</Stack></fieldset>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Button type="submit" variant="contained" startIcon={<PersonAddAltOutlinedIcon />}>Submit editor application</Button>
+          <Button type="button" variant="text" onClick={() => { setShowApplication(false); setError(""); }}>Back to sign in</Button>
+        </Box> : <Stack spacing={2.5} className="editor-signin-form">
+          <TextField label="Username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
+          <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Button variant="contained" startIcon={<LoginOutlinedIcon />} onClick={handleLogin}>Sign in to Editor Dashboard</Button>
+          <Button variant="outlined" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => { setShowApplication(true); setError(""); }}>Apply as an Editor</Button>
+        </Stack>}
+      </CardContent>
+    </Card>
+  </Box>;
 }

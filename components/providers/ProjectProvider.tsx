@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/preserve-manual-memoization */
 
 import {
   createContext,
@@ -11,7 +12,7 @@ import {
 } from "react";
 
 import { mockProjects } from "@/data/mockProjects";
-import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
+import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EditorApplication, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
 import { getEditingMilestones } from "@/utils/notifications";
 
 type UserRole = "admin" | "client" | "team" | "editor";
@@ -37,6 +38,10 @@ interface ProjectContextValue {
   loginTeam: (username: string, password: string) => boolean;
   loginEditor: (username: string, password: string) => boolean;
   editors: EditorAccount[];
+  editorApplications: EditorApplication[];
+  submitEditorApplication: (input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => boolean;
+  approveEditorApplication: (applicationId: string, username: string, password: string) => boolean;
+  rejectEditorApplication: (applicationId: string) => void;
   createEditor: (input: Omit<EditorAccount, "id" | "createdAt">) => boolean;
   registerTeam: (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => void;
   teamRegistrations: TeamRegistration[];
@@ -99,6 +104,7 @@ const STORAGE_KEYS = {
   teamRegistrations: "shootatside-team-registrations",
   teamMembers: "shootatside-team-members",
   editors: "shootatside-editors",
+  editorApplications: "shootatside-editor-applications",
 } as const;
 
 const DEFAULT_ROLE_STATE = {
@@ -159,15 +165,84 @@ function writeSessionValue<T>(key: string, value: T | null | undefined) {
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [view, setView] = useState<ViewMode>("admin");
-  const [activeRole, setActiveRole] = useState<ViewMode | "guest">("admin");
-  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0]?.id ?? "");
-  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [editors, setEditors] = useState<EditorAccount[]>([]);
-  const [isReady, setIsReady] = useState(false);
+  const initialRoleState = readSessionValue<{ view: ViewMode; activeRole: ViewMode | "guest" }>(STORAGE_KEYS.roleState, DEFAULT_ROLE_STATE);
+  const initialUser = readSessionValue<SessionUser | null>(STORAGE_KEYS.user, null);
+  const initialProjects = readStoredValue<Project[]>(STORAGE_KEYS.projects, mockProjects).map((project) => {
+    const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
+    const eventTracker = project.eventTracker;
+    const memberJoinedAt = { ...(eventTracker?.memberJoinedAt ?? {}) };
+
+    if (leader && eventTracker?.leaderArrivedAt && !memberJoinedAt[leader.memberEmail]) {
+      memberJoinedAt[leader.memberEmail] = eventTracker.leaderArrivedAt;
+    }
+
+    return {
+      ...project,
+      eventTracker: eventTracker ? { ...eventTracker, memberJoinedAt } : undefined,
+      teamInterest: project.teamInterest
+        ? Array.isArray(project.teamInterest)
+          ? project.teamInterest
+          : [project.teamInterest as unknown as TeamInterest]
+        : undefined,
+    };
+  });
+  const initialSelectedProject = readStoredValue<string | null>(STORAGE_KEYS.selectedProjectId, mockProjects[0]?.id ?? null);
+  const initialTeamRegistrations = readStoredValue<TeamRegistration[]>(STORAGE_KEYS.teamRegistrations, []).map((registration) => ({
+    ...registration,
+    preferredRoles: registration.preferredRoles ?? [],
+  }));
+  const initialTeamMembers = readStoredValue<TeamMember[]>(STORAGE_KEYS.teamMembers, []);
+  const initialEditors = readStoredValue<EditorAccount[]>(STORAGE_KEYS.editors, []).map((editor) => ({
+    ...editor,
+    editingRoles: editor.editingRoles ?? [],
+  }));
+  const initialEditorApplications = readStoredValue<EditorApplication[]>(STORAGE_KEYS.editorApplications, []).map((application) => ({
+    ...application,
+    editingRoles: application.editingRoles ?? [],
+  }));
+  const initialNormalizedUser = initialUser
+    ? {
+        name: initialUser.name ?? "",
+        email: initialUser.email ?? "",
+        phone: initialUser.phone ?? "",
+        role: initialUser.role ?? (initialRoleState.activeRole === "admin" ? "admin" : initialRoleState.activeRole === "client" ? "client" : "team"),
+      }
+    : null;
+  const initialEditorMap = new Map(initialEditors.map((editor) => [editor.email.toLowerCase(), editor]));
+
+  initialTeamRegistrations.forEach((registration) => {
+    const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+    if (registration.status !== "ACCEPTED" || editingRoles.length === 0 || !registration.username || !registration.password) return;
+
+    const email = registration.email.trim().toLowerCase();
+    const existingEditor = initialEditorMap.get(email);
+    if (existingEditor) {
+      existingEditor.editingRoles = Array.from(new Set([...existingEditor.editingRoles, ...editingRoles]));
+      return;
+    }
+
+    initialEditorMap.set(email, {
+      id: `EDITOR-${registration.id}`,
+      name: registration.name,
+      email,
+      phone: registration.mobile,
+      username: registration.username,
+      password: registration.password,
+      editingRoles,
+      createdAt: registration.submittedAt,
+    });
+  });
+
+  const [view, setView] = useState<ViewMode>(initialRoleState.view ?? "admin");
+  const [activeRole, setActiveRole] = useState<ViewMode | "guest">(initialRoleState.activeRole ?? "admin");
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(initialNormalizedUser);
+  const [projects, setProjects] = useState<Project[]>(initialProjects.length > 0 ? initialProjects : mockProjects);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialSelectedProject ?? mockProjects[0]?.id ?? "");
+  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(initialTeamRegistrations);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [editors, setEditors] = useState<EditorAccount[]>(Array.from(initialEditorMap.values()));
+  const [editorApplications, setEditorApplications] = useState<EditorApplication[]>(initialEditorApplications);
+  const [isReady, setIsReady] = useState(true);
 
   const syncFromStorage = useCallback(() => {
     if (typeof window === "undefined") {
@@ -213,10 +288,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       ...editor,
       editingRoles: editor.editingRoles ?? [],
     }));
+    const storedEditorApplications = readStoredValue<EditorApplication[]>(STORAGE_KEYS.editorApplications, []).map((application) => ({
+      ...application,
+      editingRoles: application.editingRoles ?? [],
+    }));
     const editorAccountsByEmail = new Map(storedEditors.map((editor) => [editor.email.toLowerCase(), editor]));
 
     storedTeamRegistrations.forEach((registration) => {
-      const editingRoles = registration.preferredRoles.filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+      const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
       if (registration.status !== "ACCEPTED" || editingRoles.length === 0 || !registration.username || !registration.password) return;
 
       const email = registration.email.trim().toLowerCase();
@@ -237,7 +316,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         createdAt: registration.submittedAt,
       });
     });
-    const migratedEditors = Array.from(editorAccountsByEmail.values());
 
     setView(storedRoleState.view ?? "admin");
     setActiveRole(storedRoleState.activeRole ?? "admin");
@@ -246,13 +324,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(storedSelectedProject ?? mockProjects[0]?.id ?? "");
     setTeamRegistrations(storedTeamRegistrations);
     setTeamMembers(storedTeamMembers);
-    setEditors(migratedEditors);
-    setIsReady(true);
+    setEditors(Array.from(editorAccountsByEmail.values()));
+    setEditorApplications(storedEditorApplications);
   }, []);
-
-  useEffect(() => {
-    syncFromStorage();
-  }, [syncFromStorage]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isReady) {
@@ -260,7 +334,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || event.key === STORAGE_KEYS.editors || !event.key) {
+      if (event.key === STORAGE_KEYS.projects || event.key === STORAGE_KEYS.selectedProjectId || event.key === STORAGE_KEYS.teamRegistrations || event.key === STORAGE_KEYS.teamMembers || event.key === STORAGE_KEYS.editors || event.key === STORAGE_KEYS.editorApplications || !event.key) {
         syncFromStorage();
       }
     };
@@ -278,6 +352,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     writeStoredValue(STORAGE_KEYS.teamRegistrations, teamRegistrations);
     writeStoredValue(STORAGE_KEYS.teamMembers, teamMembers);
     writeStoredValue(STORAGE_KEYS.editors, editors);
+    writeStoredValue(STORAGE_KEYS.editorApplications, editorApplications);
     if (selectedProjectId) {
       writeStoredValue(STORAGE_KEYS.selectedProjectId, selectedProjectId);
     } else {
@@ -291,7 +366,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     writeSessionValue(STORAGE_KEYS.roleState, { view, activeRole });
-  }, [activeRole, currentUser, editors, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
+  }, [activeRole, currentUser, editorApplications, editors, isReady, projects, selectedProjectId, teamMembers, teamRegistrations, view]);
 
   const isLoggedIn = Boolean(currentUser);
 
@@ -340,6 +415,49 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return true;
   }, [editors]);
 
+  const submitEditorApplication = useCallback((input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => {
+    const email = input.email.trim().toLowerCase();
+    if (!email || input.editingRoles.length === 0 || !input.aadharDataUrl || !input.selfieDataUrl) return false;
+    if (editors.some((editor) => editor.email.toLowerCase() === email)
+      || editorApplications.some((application) => application.email.toLowerCase() === email && application.status !== "REJECTED")) return false;
+
+    const application: EditorApplication = {
+      ...input,
+      email,
+      id: `EDITOR-APP-${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+      status: "PENDING",
+    };
+    setEditorApplications((current) => [application, ...current]);
+    return true;
+  }, [editorApplications, editors]);
+
+  const approveEditorApplication = useCallback((applicationId: string, username: string, password: string) => {
+    const application = editorApplications.find((item) => item.id === applicationId && item.status === "PENDING");
+    const normalizedUsername = username.trim();
+    if (!application || !normalizedUsername || !password.trim()) return false;
+    if (editors.some((editor) => editor.email.toLowerCase() === application.email.toLowerCase() || editor.username.toLowerCase() === normalizedUsername.toLowerCase())) return false;
+
+    setEditors((current) => [{
+      id: `EDITOR-${application.id}`,
+      name: application.name,
+      email: application.email,
+      phone: application.mobile,
+      username: normalizedUsername,
+      password,
+      editingRoles: application.editingRoles,
+      createdAt: new Date().toISOString(),
+    }, ...current]);
+    setEditorApplications((current) => current.map((item) => item.id === applicationId ? { ...item, status: "APPROVED" } : item));
+    return true;
+  }, [editorApplications, editors]);
+
+  const rejectEditorApplication = useCallback((applicationId: string) => {
+    setEditorApplications((current) => current.map((item) => item.id === applicationId && item.status === "PENDING"
+      ? { ...item, status: "REJECTED" }
+      : item));
+  }, []);
+
   const registerTeam = useCallback((input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => {
     setTeamRegistrations((current) => [
       {
@@ -356,7 +474,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const registration = teamRegistrations.find((item) => item.id === registrationId);
     if (!registration) return;
 
-    const editingRoles = registration.preferredRoles.filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
+    const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
 
     setTeamRegistrations((current) => current.map((item) => item.id === registrationId
       ? { ...item, username, password, status: "ACCEPTED" }
@@ -893,6 +1011,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       loginTeam,
       loginEditor,
       editors,
+      editorApplications,
+      submitEditorApplication,
+      approveEditorApplication,
+      rejectEditorApplication,
       createEditor,
       registerTeam,
       teamRegistrations,
@@ -936,7 +1058,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateEditingMilestone,
       deliverEditedFiles,
     }),
-    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
+    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

@@ -141,7 +141,7 @@ export function ClientDashboard() {
         <div className="client-project-modal-content">
           {selectedProject.requestAcceptedAt ? <section className="section-block client-contact-request">
             <Typography variant="h6" component="h3">Contact Details</Typography>
-            {selectedProject.clientContactDetails ? <Alert severity="success">Contact form sent. The studio will contact you using your preferred method.</Alert> : <>
+            {selectedProject.clientContactDetails ? <Alert severity="success">Contract form sent. The studio will contact you using your preferred method.</Alert> : <>
               <Alert severity="info">Your request was accepted by the studio. Please confirm how and when they should contact you.</Alert>
               <Box component="form" onSubmit={handleContactFormSubmit}>
                 <Stack spacing={2}>
@@ -154,7 +154,7 @@ export function ClientDashboard() {
                     <TextField fullWidth required label="Best time to contact" placeholder="e.g. 10:00 AM–1:00 PM" value={contactForm.bestTimeToContact} onChange={(event) => setContactForm((current) => ({ ...current, bestTimeToContact: event.target.value }))} />
                   </Stack>
                   <TextField fullWidth multiline minRows={3} label="Message for the studio (optional)" value={contactForm.message} onChange={(event) => setContactForm((current) => ({ ...current, message: event.target.value }))} />
-                  <Box><Button type="submit" variant="contained" startIcon={<SendOutlinedIcon />}>Send Contact Details</Button></Box>
+                  <Box><Button type="submit" variant="contained" startIcon={<SendOutlinedIcon />}>Send Contract Details</Button></Box>
                 </Stack>
               </Box>
             </>}

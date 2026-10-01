@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -29,12 +28,8 @@ export function ClientLoginPage() {
   };
 
   return (
-    <div className="role-login-shell">
+    <div className="role-login-shell client-login-shell">
       <div className="role-login-container client-surface">
-        <Link href="/" className="back-link">
-          ← Back
-        </Link>
-
         <div className="role-login-header client-header">
           <div className="role-icon">👤</div>
           <h1>Client Portal</h1>
