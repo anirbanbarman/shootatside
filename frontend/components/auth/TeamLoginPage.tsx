@@ -17,25 +17,24 @@ export function TeamLoginPage() {
   const [error, setError] = useState("");
   const [editorPortalSuggested, setEditorPortalSuggested] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
       setError("Please enter your username and password.");
       return;
     }
 
-    if (!loginTeam(username, password)) {
+    try {
+      await loginTeam(username, password);
+      router.replace("/team");
+    } catch {
       const editorAccount = teamRegistrations.find((registration) => registration.status === "ACCEPTED"
         && registration.username === username.trim()
-        && registration.password === password
         && registration.preferredRoles.some((role) => EDITING_ROLES.includes(role as (typeof EDITING_ROLES)[number])));
       setEditorPortalSuggested(Boolean(editorAccount));
       setError(editorAccount
         ? "Your registration includes an editing specialty. Please sign in to the Editor Workspace at /editor."
         : "Your account is pending approval or the credentials are incorrect.");
-      return;
     }
-
-    router.replace("/team");
   };
 
   return (
@@ -50,8 +49,7 @@ export function TeamLoginPage() {
         <div className="role-login-form">
           {showRegistration ? <>
             <p className="form-intro">Register below. Admin approval is required before event access is enabled.</p>
-            <TeamRegistrationForm onComplete={() => setShowRegistration(false)} />
-            <button type="button" className="secondary-button full-width" onClick={() => setShowRegistration(false)}>Back to Login</button>
+            <TeamRegistrationForm />
           </> : <>
           <p className="form-intro">Use the username and password given to you after admin approval.</p>
 

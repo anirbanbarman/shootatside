@@ -10,8 +10,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import LinearProgress from "@mui/material/LinearProgress";
 
 import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EditorApplication, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
+import { onApiActivity, trackedFetch } from "@/utils/apiActivity";
 import { getEditingMilestones } from "@/utils/notifications";
 
 type UserRole = "admin" | "client" | "team" | "editor";
@@ -34,18 +36,20 @@ interface ProjectContextValue {
   currentUser: SessionUser | null;
   loginAdmin: (user: SessionUser) => void;
   loginClient: (user: SessionUser) => void;
-  loginTeam: (username: string, password: string) => boolean;
-  loginEditor: (username: string, password: string) => boolean;
+  loginTeam: (username: string, password: string) => Promise<boolean>;
+  loginEditor: (username: string, password: string) => Promise<boolean>;
   editors: EditorAccount[];
   editorApplications: EditorApplication[];
-  submitEditorApplication: (input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => boolean;
-  approveEditorApplication: (applicationId: string, username: string, password: string) => boolean;
-  rejectEditorApplication: (applicationId: string) => void;
+  submitEditorApplication: (input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => Promise<void>;
+  approveEditorApplication: (applicationId: string, username: string, password: string) => Promise<void>;
+  rejectEditorApplication: (applicationId: string) => Promise<void>;
   createEditor: (input: Omit<EditorAccount, "id" | "createdAt">) => boolean;
-  registerTeam: (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => void;
+  registerTeam: (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => Promise<void>;
   teamRegistrations: TeamRegistration[];
-  approveTeamRegistration: (registrationId: string, username: string, password: string) => void;
-  rejectTeamRegistration: (registrationId: string) => void;
+  approveTeamRegistration: (registrationId: string, username: string, password: string) => Promise<void>;
+  updateTeamCredentials: (registrationId: string, username: string, password: string) => Promise<void>;
+  uploadTeamRegistrationImages: (registrationId: string, uploads: Partial<Pick<TeamRegistration, "aadharFileName" | "aadharDataUrl" | "selfieFileName" | "selfieDataUrl">>) => Promise<void>;
+  rejectTeamRegistration: (registrationId: string) => Promise<void>;
   teamMembers: TeamMember[];
   createTeamMember: (input: { name: string; role: TeamMemberRole; email: string; phone: string }) => void;
   logout: () => void;
@@ -61,20 +65,21 @@ interface ProjectContextValue {
     venue: string;
     requirements: string;
   }) => void;
-  acceptClientRequest: (projectId: string) => void;
-  submitClientContactDetails: (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => void;
+  acceptClientRequest: (projectId: string) => Promise<void>;
+  submitClientContactDetails: (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => Promise<void>;
   resetDemoProjects: () => void;
   seedDemoProject: (scenario: DemoScenario) => void;
   sendQuote: (projectId: string, amount: number, comment: string, advancePercent?: number) => Promise<void>;
-  acceptQuote: (projectId: string) => void;
-  rejectQuote: (projectId: string, comment: string) => void;
+  acceptQuote: (projectId: string) => Promise<void>;
+  rejectQuote: (projectId: string, comment: string) => Promise<void>;
   sendNegotiation: (projectId: string, amount: number, comment: string, advancePercent?: number) => void;
-  acceptNegotiation: (projectId: string) => void;
-  rejectNegotiation: (projectId: string, comment: string) => void;
-  payAdvance: (projectId: string) => void;
-  requestTeamInterest: (projectId: string) => string | null;
-  approveTeamInterest: (projectId: string, memberEmail: string) => void;
-  rejectTeamInterest: (projectId: string, memberEmail: string) => void;
+  acceptNegotiation: (projectId: string) => Promise<void>;
+  rejectNegotiation: (projectId: string, comment: string) => Promise<void>;
+  payAdvance: (projectId: string, screenshotDataUrl: string, screenshotFileName: string) => Promise<void>;
+  verifyAdvancePayment: (projectId: string) => Promise<void>;
+  requestTeamInterest: (projectId: string) => Promise<string | null>;
+  approveTeamInterest: (projectId: string, memberEmail: string) => Promise<void>;
+  rejectTeamInterest: (projectId: string, memberEmail: string) => Promise<void>;
   assignTeam: (projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => void;
   assignEventTeam: (projectId: string, assignments: Omit<EventTeamMember, "assignedAt">[]) => void;
   updateClientTeamBrief: (projectId: string, brief: { callTime: string; callVenue: string }) => void;
@@ -104,7 +109,7 @@ const STORAGE_KEYS = {
 } as const;
 
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`, {
+  const response = await trackedFetch(`${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -192,6 +197,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [editors, setEditors] = useState<EditorAccount[]>([]);
   const [editorApplications, setEditorApplications] = useState<EditorApplication[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const [activeApiRequests, setActiveApiRequests] = useState(0);
+
+  useEffect(() => onApiActivity((active) => {
+    setActiveApiRequests((count) => Math.max(0, count + (active ? 1 : -1)));
+  }), []);
 
   const syncFromStorage = useCallback(() => {
     if (typeof window === "undefined") {
@@ -312,23 +322,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setView("client");
   }, []);
 
-  const loginTeam = useCallback((username: string, password: string) => {
-    const registration = teamRegistrations.find((item) => item.status === "ACCEPTED" && item.username === username.trim() && item.password === password);
-    const isEditor = registration?.preferredRoles.some((role) => EDITING_ROLES.includes(role as EditingRole));
-    if (!registration || isEditor) {
-      return false;
-    }
-
-    setCurrentUser({ name: registration.name, email: registration.email, phone: registration.mobile, role: "team" });
+  const loginTeam = useCallback(async (username: string, password: string) => {
+    const response = await fetchApi<{ ok: boolean; user: SessionUser }>("/auth/team/login", {
+      method: "POST",
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "team" });
     setActiveRole("team");
     setView("team");
     return true;
-  }, [teamRegistrations]);
+  }, []);
 
-  const loginEditor = useCallback((username: string, password: string) => {
-    const editor = editors.find((item) => item.username === username.trim() && item.password === password);
-    if (!editor) return false;
-    setCurrentUser({ name: editor.name, email: editor.email, phone: editor.phone, role: "editor" });
+  const loginEditor = useCallback(async (username: string, password: string) => {
+    const response = await fetchApi<{ ok: boolean; user: SessionUser }>("/auth/editor/login", {
+      method: "POST",
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "editor" });
     setActiveRole("editor");
     setView("editor");
     return true;
@@ -345,29 +355,35 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return true;
   }, [editors]);
 
-  const submitEditorApplication = useCallback((input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => {
+  const submitEditorApplication = useCallback(async (input: Omit<EditorApplication, "id" | "submittedAt" | "status">) => {
     const email = input.email.trim().toLowerCase();
-    if (!email || input.editingRoles.length === 0 || !input.aadharDataUrl || !input.selfieDataUrl) return false;
+    if (!email || input.editingRoles.length === 0 || !input.aadharDataUrl || !input.selfieDataUrl) {
+      throw new Error("Email, editing specialties, ID image, and selfie are required.");
+    }
     if (editors.some((editor) => editor.email.toLowerCase() === email)
-      || editorApplications.some((application) => application.email.toLowerCase() === email && application.status !== "REJECTED")) return false;
+      || editorApplications.some((application) => application.email.toLowerCase() === email && application.status !== "REJECTED")) {
+      throw new Error("An application or editor account already exists for this email.");
+    }
 
-    const application: EditorApplication = {
-      ...input,
-      email,
-      id: `EDITOR-APP-${Date.now()}`,
-      submittedAt: new Date().toISOString(),
-      status: "PENDING",
-    };
-    setEditorApplications((current) => [application, ...current]);
-    return true;
+    const response = await fetchApi<{ ok: boolean; application: EditorApplication }>("/editor/applications", {
+      method: "POST",
+      body: JSON.stringify({ ...input, email }),
+    });
+    setEditorApplications((current) => [response.application, ...current.filter((application) => application.id !== response.application.id)]);
   }, [editorApplications, editors]);
 
-  const approveEditorApplication = useCallback((applicationId: string, username: string, password: string) => {
+  const approveEditorApplication = useCallback(async (applicationId: string, username: string, password: string) => {
     const application = editorApplications.find((item) => item.id === applicationId && item.status === "PENDING");
     const normalizedUsername = username.trim();
-    if (!application || !normalizedUsername || !password.trim()) return false;
-    if (editors.some((editor) => editor.email.toLowerCase() === application.email.toLowerCase() || editor.username.toLowerCase() === normalizedUsername.toLowerCase())) return false;
+    if (!application || !normalizedUsername || !password.trim()) throw new Error("Set a username and password before approving.");
+    if (editors.some((editor) => editor.email.toLowerCase() === application.email.toLowerCase() || editor.username.toLowerCase() === normalizedUsername.toLowerCase())) {
+      throw new Error("An editor with this email or username already exists.");
+    }
 
+    const response = await fetchApi<{ ok: boolean; application: EditorApplication }>(`/editor/applications/${encodeURIComponent(applicationId)}/approve`, {
+      method: "PATCH",
+      body: JSON.stringify({ username: normalizedUsername, password }),
+    });
     setEditors((current) => [{
       id: `EDITOR-${application.id}`,
       name: application.name,
@@ -378,37 +394,35 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       editingRoles: application.editingRoles,
       createdAt: new Date().toISOString(),
     }, ...current]);
-    setEditorApplications((current) => current.map((item) => item.id === applicationId ? { ...item, status: "APPROVED" } : item));
-    return true;
+    setEditorApplications((current) => current.map((item) => item.id === applicationId ? response.application : item));
   }, [editorApplications, editors]);
 
-  const rejectEditorApplication = useCallback((applicationId: string) => {
-    setEditorApplications((current) => current.map((item) => item.id === applicationId && item.status === "PENDING"
-      ? { ...item, status: "REJECTED" }
-      : item));
+  const rejectEditorApplication = useCallback(async (applicationId: string) => {
+    const response = await fetchApi<{ ok: boolean; application: EditorApplication }>(`/editor/applications/${encodeURIComponent(applicationId)}/reject`, {
+      method: "PATCH",
+    });
+    setEditorApplications((current) => current.map((item) => item.id === applicationId ? response.application : item));
   }, []);
 
-  const registerTeam = useCallback((input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => {
-    setTeamRegistrations((current) => [
-      {
-        ...input,
-        id: `TEAM-${Date.now()}`,
-        status: "PENDING",
-        submittedAt: new Date().toISOString(),
-      },
-      ...current,
-    ]);
+  const registerTeam = useCallback(async (input: Omit<TeamRegistration, "id" | "status" | "submittedAt">) => {
+    const response = await fetchApi<{ ok: boolean; registration: TeamRegistration }>("/team/registrations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    setTeamRegistrations((current) => [response.registration, ...current.filter((registration) => registration.id !== response.registration.id)]);
   }, []);
 
-  const approveTeamRegistration = useCallback((registrationId: string, username: string, password: string) => {
+  const approveTeamRegistration = useCallback(async (registrationId: string, username: string, password: string) => {
     const registration = teamRegistrations.find((item) => item.id === registrationId);
-    if (!registration) return;
+    if (!registration) throw new Error("Team registration was not found.");
+    const response = await fetchApi<{ ok: boolean; registration: TeamRegistration }>(`/team/registrations/${encodeURIComponent(registrationId)}/approve`, {
+      method: "PATCH",
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
 
     const editingRoles = (registration.preferredRoles as Array<TeamMemberRole | EditingRole>).filter((role): role is EditingRole => EDITING_ROLES.includes(role as EditingRole));
 
-    setTeamRegistrations((current) => current.map((item) => item.id === registrationId
-      ? { ...item, username, password, status: "ACCEPTED" }
-      : item));
+    setTeamRegistrations((current) => current.map((item) => item.id === registrationId ? response.registration : item));
 
     if (editingRoles.length > 0) {
       setEditors((current) => {
@@ -435,10 +449,27 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [teamRegistrations]);
 
-  const rejectTeamRegistration = useCallback((registrationId: string) => {
-    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId
-      ? { ...registration, status: "REJECTED" }
-      : registration));
+  const updateTeamCredentials = useCallback(async (registrationId: string, username: string, password: string) => {
+    const response = await fetchApi<{ ok: boolean; registration: TeamRegistration }>(`/team/registrations/${encodeURIComponent(registrationId)}/credentials`, {
+      method: "PATCH",
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId ? response.registration : registration));
+  }, []);
+
+  const uploadTeamRegistrationImages = useCallback(async (registrationId: string, uploads: Partial<Pick<TeamRegistration, "aadharFileName" | "aadharDataUrl" | "selfieFileName" | "selfieDataUrl">>) => {
+    const response = await fetchApi<{ ok: boolean; registration: TeamRegistration }>(`/team/registrations/${encodeURIComponent(registrationId)}/uploads`, {
+      method: "PATCH",
+      body: JSON.stringify(uploads),
+    });
+    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId ? response.registration : registration));
+  }, []);
+
+  const rejectTeamRegistration = useCallback(async (registrationId: string) => {
+    const response = await fetchApi<{ ok: boolean; registration: TeamRegistration }>(`/team/registrations/${encodeURIComponent(registrationId)}/reject`, {
+      method: "PATCH",
+    });
+    setTeamRegistrations((current) => current.map((registration) => registration.id === registrationId ? response.registration : registration));
   }, []);
 
   const createTeamMember = useCallback((input: { name: string; role: TeamMemberRole; email: string; phone: string }) => {
@@ -522,59 +553,35 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const acceptClientRequest = useCallback((projectId: string) => {
-    setProjects((current) => current.map((project) => project.id === projectId && !project.requestAcceptedAt
-      ? { ...project, requestAcceptedAt: new Date().toISOString() }
-      : project));
+  const acceptClientRequest = useCallback(async (projectId: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/accept-request`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const submitClientContactDetails = useCallback((projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => {
+  const submitClientContactDetails = useCallback(async (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => {
     if (!currentUser || currentUser.role !== "client") return;
-
-    setProjects((current) => current.map((project) => project.id === projectId
-      && project.requestAcceptedAt
-      && project.client.email.toLowerCase() === currentUser.email.toLowerCase()
-      ? { ...project, clientContactDetails: { ...details, submittedAt: new Date().toISOString() } }
-      : project));
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/contract-details`, {
+      method: "PATCH",
+      body: JSON.stringify(details),
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, [currentUser]);
 
-  const acceptQuote = useCallback((projectId: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        return {
-          ...project,
-          clientResponse: {
-            type: "ACCEPTED",
-            respondedAt: new Date().toISOString(),
-          },
-        };
-      }),
-    );
+  const acceptQuote = useCallback(async (projectId: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/accept-quote`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const rejectQuote = useCallback((projectId: string, comment: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        return {
-          ...project,
-          clientResponse: {
-            type: "REJECTED",
-            comment,
-            respondedAt: new Date().toISOString(),
-          },
-          negotiation: undefined,
-          negotiationResponse: undefined,
-        };
-      }),
-    );
+  const rejectQuote = useCallback(async (projectId: string, comment: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/reject-quote`, {
+      method: "PATCH",
+      body: JSON.stringify({ comment }),
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
   const sendNegotiation = useCallback((projectId: string, amount: number, comment: string, advancePercent = 30) => {
@@ -606,49 +613,29 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const acceptNegotiation = useCallback((projectId: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        return {
-          ...project,
-          negotiationResponse: {
-            type: "ACCEPTED",
-            respondedAt: new Date().toISOString(),
-          },
-        };
-      }),
-    );
+  const acceptNegotiation = useCallback(async (projectId: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/accept-negotiation`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const payAdvance = useCallback((projectId: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        const activeQuote = project.negotiation ?? project.initialQuote;
-        const advancePercent = activeQuote?.advancePercent ?? project.payment?.advancePercent ?? 30;
-        const advanceAmount = Math.round(((activeQuote?.amount ?? project.payment?.amount ?? 0) * advancePercent) / 100);
-
-        return {
-          ...project,
-          payment: {
-            advancePercent,
-            amount: advanceAmount,
-            status: "PAID",
-            paidAt: new Date().toISOString(),
-          },
-        };
-      }),
-    );
+  const payAdvance = useCallback(async (projectId: string, screenshotDataUrl: string, screenshotFileName: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/pay-advance`, {
+      method: "PATCH",
+      body: JSON.stringify({ screenshotDataUrl, screenshotFileName }),
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const requestTeamInterest = useCallback((projectId: string) => {
+  const verifyAdvancePayment = useCallback(async (projectId: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/verify-payment`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
+  }, []);
+
+  const requestTeamInterest = useCallback(async (projectId: string) => {
     if (!currentUser || currentUser.role !== "team") {
       return "Please log in as an approved team member.";
     }
@@ -667,63 +654,38 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return `You can assign only one event on ${project.eventDate}.`;
     }
 
-    setProjects((current) => current.map((item) => {
-      if (item.id !== projectId) {
-        return item;
-      }
-
-      const interests = item.teamInterest ?? [];
-      const existingInterest = interests.find((interest) => interest.memberEmail === currentUser.email);
-      const nextInterest = {
-        member: currentUser.name,
-        memberEmail: currentUser.email,
-        requestedAt: new Date().toISOString(),
-        status: "PENDING" as const,
-      };
-
-      return {
-        ...item,
-        teamInterest: existingInterest
-          ? interests.map((interest) => interest.memberEmail === currentUser.email ? nextInterest : interest)
-          : [...interests, nextInterest],
-      };
-    }));
-    return null;
+    try {
+      const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/team-interest`, {
+        method: "POST",
+        body: JSON.stringify({ member: currentUser.name, memberEmail: currentUser.email }),
+      });
+      setProjects((current) => current.map((item) => item.id === projectId ? response.project : item));
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "Unable to submit interest. Please try again.";
+    }
   }, [currentUser, projects]);
 
-  const approveTeamInterest = useCallback((projectId: string, memberEmail: string) => {
-    setProjects((current) =>
-      current.map((project) => project.id === projectId && project.teamInterest
-        ? { ...project, teamInterest: project.teamInterest.map((interest) => interest.memberEmail === memberEmail && interest.status === "PENDING" ? { ...interest, status: "ACCEPTED" } : interest) }
-        : project),
-    );
+  const approveTeamInterest = useCallback(async (projectId: string, memberEmail: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/team-interest/${encodeURIComponent(memberEmail)}/approve`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const rejectTeamInterest = useCallback((projectId: string, memberEmail: string) => {
-    setProjects((current) =>
-      current.map((project) => project.id === projectId && project.teamInterest
-        ? { ...project, teamInterest: project.teamInterest.map((interest) => interest.memberEmail === memberEmail && interest.status === "PENDING" ? { ...interest, status: "REJECTED" } : interest) }
-        : project),
-    );
+  const rejectTeamInterest = useCallback(async (projectId: string, memberEmail: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/team-interest/${encodeURIComponent(memberEmail)}/reject`, {
+      method: "PATCH",
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
-  const rejectNegotiation = useCallback((projectId: string, comment: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) {
-          return project;
-        }
-
-        return {
-          ...project,
-          negotiationResponse: {
-            type: "REJECTED",
-            comment,
-            respondedAt: new Date().toISOString(),
-          },
-        };
-      }),
-    );
+  const rejectNegotiation = useCallback(async (projectId: string, comment: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/reject-negotiation`, {
+      method: "PATCH",
+      body: JSON.stringify({ comment }),
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, []);
 
   const assignTeam = useCallback((projectId: string, assignment: { member: string; date: string; camera: string; gear: string; notes: string }) => {
@@ -891,6 +853,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       registerTeam,
       teamRegistrations,
       approveTeamRegistration,
+      updateTeamCredentials,
+      uploadTeamRegistrationImages,
       rejectTeamRegistration,
       teamMembers,
       createTeamMember,
@@ -910,6 +874,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       acceptNegotiation,
       rejectNegotiation,
       payAdvance,
+      verifyAdvancePayment,
       requestTeamInterest,
       approveTeamInterest,
       rejectTeamInterest,
@@ -930,10 +895,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateEditingMilestone,
       deliverEditedFiles,
     }),
-    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, view],
+    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, updateTeamCredentials, uploadTeamRegistrationImages, verifyAdvancePayment, view],
   );
 
-  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
+  return <ProjectContext.Provider value={value}>
+    {activeApiRequests > 0 ? <LinearProgress className="global-api-progress" aria-label="Loading" /> : null}
+    {children}
+  </ProjectContext.Provider>;
 }
 
 export function useProjectContext() {

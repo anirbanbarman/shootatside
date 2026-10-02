@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
+import { trackedFetch } from "@/utils/apiActivity";
 
 export function AdminLoginPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export function AdminLoginPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/auth/admin/login`, {
+      const response = await trackedFetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/auth/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword }),

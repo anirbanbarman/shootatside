@@ -65,6 +65,7 @@ const editorApplicationSchema = new mongoose.Schema(
       virtuals: true,
       transform: (_document, output) => {
         output.id = String(output._id);
+        delete output.password;
         return output;
       },
     },
@@ -79,7 +80,9 @@ const teamRegistrationSchema = new mongoose.Schema(
     email: { type: String, required: true },
     address: String,
     aadharFileName: String,
+    aadharDataUrl: String,
     selfieFileName: String,
+    selfieDataUrl: String,
     phonePe: String,
     preferredRoles: [String],
     username: String,
@@ -97,6 +100,7 @@ const teamRegistrationSchema = new mongoose.Schema(
       virtuals: true,
       transform: (_document, output) => {
         output.id = String(output._id);
+        delete output.password;
         return output;
       },
     },
@@ -149,15 +153,27 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    username: { type: String, unique: true, sparse: true, trim: true },
     password: { type: String, required: true },
     phone: String,
+    editingRoles: [String],
     role: {
       type: String,
       enum: ['admin', 'client', 'team', 'editor'],
       default: 'admin',
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: (_document, output) => {
+        output.id = String(output._id);
+        delete output.password;
+        return output;
+      },
+    },
+  }
 );
 
 const User = mongoose.model('User', userSchema);
@@ -209,7 +225,16 @@ const seedDefaultUsers = async () => {
  *         description: Backend is running
  */
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, message: 'ShootAtSide backend is running', timestamp: new Date().toISOString() });
+  const databaseConnected = mongoose.connection.readyState === 1;
+  res.status(databaseConnected ? 200 : 503).json({
+    ok: databaseConnected,
+    api: 'running',
+    database: databaseConnected ? 'connected' : 'disconnected',
+    message: databaseConnected
+      ? 'ShootAtSide backend and database are ready'
+      : 'Backend is running, but MongoDB is unavailable',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 /**
@@ -336,10 +361,10 @@ app.post('/api/auth/client/login', async (req, res) => {
  */
 
 app.post('/api/auth/team/login', async (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const username = String(req.body?.username ?? req.body?.email ?? '').trim();
   const password = String(req.body?.password ?? '').trim();
 
-  const user = await User.findOne({ email, role: 'team' });
+  const user = await User.findOne({ role: 'team', $or: [{ username }, { email: username.toLowerCase() }] });
 
   if (user && await verifyPassword(password, user.password)) {
     return sendAuthResponse(res, 'team', {
@@ -379,10 +404,10 @@ app.post('/api/auth/team/login', async (req, res) => {
  */
 
 app.post('/api/auth/editor/login', async (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const username = String(req.body?.username ?? req.body?.email ?? '').trim();
   const password = String(req.body?.password ?? '').trim();
 
-  const user = await User.findOne({ email, role: 'editor' });
+  const user = await User.findOne({ role: 'editor', $or: [{ username }, { email: username.toLowerCase() }] });
 
   if (user && await verifyPassword(password, user.password)) {
     return sendAuthResponse(res, 'editor', {
@@ -464,17 +489,36 @@ app.post('/api/editor/applications', async (req, res) => {
  */
 app.patch('/api/editor/applications/:id/approve', async (req, res) => {
   try {
-    const application = await EditorApplication.findByIdAndUpdate(
-      req.params.id,
-      { status: 'APPROVED' },
-      { new: true }
-    );
+    const application = await EditorApplication.findById(req.params.id);
 
     if (!application) {
       return res.status(404).json({ ok: false, message: 'Application not found' });
     }
 
-    res.json({ ok: true, application });
+    const username = String(req.body?.username ?? '').trim();
+    const password = String(req.body?.password ?? '').trim();
+    if (!username || !password) {
+      return res.status(400).json({ ok: false, message: 'Username and password are required to approve an editor.' });
+    }
+
+    const conflictingUser = await User.findOne({ $or: [{ email: application.email.toLowerCase() }, { username }] });
+    if (conflictingUser) {
+      return res.status(409).json({ ok: false, message: 'An account already exists with this email or username.' });
+    }
+
+    await User.create({
+      name: application.name,
+      email: application.email.toLowerCase(),
+      username,
+      password: await hashPassword(password),
+      phone: application.mobile,
+      role: 'editor',
+      editingRoles: application.editingRoles,
+    });
+    application.status = 'APPROVED';
+    await application.save();
+
+    res.json({ ok: true, application: application.toJSON() });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });
   }
@@ -498,11 +542,7 @@ app.patch('/api/editor/applications/:id/approve', async (req, res) => {
  */
 app.patch('/api/editor/applications/:id/reject', async (req, res) => {
   try {
-    const application = await EditorApplication.findByIdAndUpdate(
-      req.params.id,
-      { status: 'REJECTED' },
-      { new: true }
-    );
+    const application = await EditorApplication.findByIdAndUpdate(req.params.id, { status: 'REJECTED' }, { new: true });
 
     if (!application) {
       return res.status(404).json({ ok: false, message: 'Application not found' });
@@ -552,13 +592,103 @@ app.get('/api/team/registrations', async (req, res) => {
 app.post('/api/team/registrations', async (req, res) => {
   try {
     const payload = req.body;
+    const requiredFields = ['name', 'mobile', 'whatsapp', 'email', 'address', 'phonePe', 'aadharFileName', 'aadharDataUrl', 'selfieFileName', 'selfieDataUrl'];
+    if (requiredFields.some((field) => !String(payload?.[field] ?? '').trim()) || !Array.isArray(payload?.preferredRoles) || payload.preferredRoles.length === 0) {
+      return res.status(400).json({ ok: false, message: 'Complete all registration fields, upload both files, and choose at least one role.' });
+    }
+
+    const aadharDataUrl = String(payload.aadharDataUrl);
+    const selfieDataUrl = String(payload.selfieDataUrl);
+    const validAadhar = /^data:(image\/(png|jpeg|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(aadharDataUrl);
+    const validSelfie = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(selfieDataUrl);
+    if (!validAadhar || !validSelfie) {
+      return res.status(400).json({ ok: false, message: 'Upload a PNG, JPEG, WebP, or PDF ID and a PNG, JPEG, or WebP selfie.' });
+    }
+    if (Buffer.from(validAadhar[3], 'base64').length > 2 * 1024 * 1024 || Buffer.from(validSelfie[2], 'base64').length > 2 * 1024 * 1024) {
+      return res.status(400).json({ ok: false, message: 'Each upload must be 2 MB or smaller.' });
+    }
+
+    const duplicate = await TeamRegistration.findOne({ email: String(payload.email).trim().toLowerCase(), status: { $ne: 'REJECTED' } });
+    if (duplicate) return res.status(409).json({ ok: false, message: 'A team registration already exists for this email.' });
+
     const registration = await TeamRegistration.create({
-      ...payload,
+      name: String(payload.name).trim(),
+      mobile: String(payload.mobile).trim(),
+      whatsapp: String(payload.whatsapp).trim(),
+      email: String(payload.email).trim().toLowerCase(),
+      address: String(payload.address).trim(),
+      phonePe: String(payload.phonePe).trim(),
+      aadharFileName: String(payload.aadharFileName).trim(),
+      aadharDataUrl,
+      selfieFileName: String(payload.selfieFileName).trim(),
+      selfieDataUrl,
+      preferredRoles: payload.preferredRoles.map((role) => String(role)),
       status: 'PENDING',
       submittedAt: new Date(),
     });
 
     res.status(201).json({ ok: true, registration });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/team/registrations/{id}/uploads:
+ *   patch:
+ *     summary: Add or replace Base64 ID and selfie uploads for a team registration
+ *     tags: [Team]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               aadharFileName: { type: string }
+ *               aadharDataUrl: { type: string }
+ *               selfieFileName: { type: string }
+ *               selfieDataUrl: { type: string }
+ *     responses:
+ *       200: { description: Registration uploads updated }
+ *       400: { description: Invalid upload }
+ *       404: { description: Registration not found }
+ */
+app.patch('/api/team/registrations/:id/uploads', async (req, res) => {
+  try {
+    const registration = await TeamRegistration.findById(req.params.id);
+    if (!registration) return res.status(404).json({ ok: false, message: 'Registration not found' });
+
+    const uploadPairs = [
+      ['aadharDataUrl', 'aadharFileName', /^data:(image\/(png|jpeg|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/i, 3],
+      ['selfieDataUrl', 'selfieFileName', /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i, 2],
+    ];
+    let hasUpload = false;
+
+    for (const [dataField, nameField, pattern, base64Group] of uploadPairs) {
+      if (req.body?.[dataField] === undefined) continue;
+      hasUpload = true;
+      const dataUrl = String(req.body[dataField]);
+      const fileName = String(req.body?.[nameField] ?? '').trim();
+      const match = dataUrl.match(pattern);
+      if (!match || !fileName) return res.status(400).json({ ok: false, message: `A valid ${nameField === 'aadharFileName' ? 'ID' : 'selfie'} file is required.` });
+      const byteLength = Buffer.from(match[base64Group], 'base64').length;
+      if (byteLength === 0 || byteLength > 2 * 1024 * 1024) {
+        return res.status(400).json({ ok: false, message: 'Each uploaded file must be 2 MB or smaller.' });
+      }
+      registration.set(dataField, dataUrl);
+      registration.set(nameField, fileName);
+    }
+
+    if (!hasUpload) return res.status(400).json({ ok: false, message: 'Select at least one image to upload.' });
+    await registration.save();
+    res.json({ ok: true, registration: registration.toJSON() });
   } catch (error) {
     res.status(400).json({ ok: false, message: error.message });
   }
@@ -582,17 +712,104 @@ app.post('/api/team/registrations', async (req, res) => {
  */
 app.patch('/api/team/registrations/:id/approve', async (req, res) => {
   try {
-    const registration = await TeamRegistration.findByIdAndUpdate(
-      req.params.id,
-      { status: 'ACCEPTED' },
-      { new: true }
-    );
+    const registration = await TeamRegistration.findById(req.params.id);
 
     if (!registration) {
       return res.status(404).json({ ok: false, message: 'Registration not found' });
     }
 
-    res.json({ ok: true, registration });
+    const username = String(req.body?.username ?? '').trim();
+    const password = String(req.body?.password ?? '').trim();
+    if (!username || !password) {
+      return res.status(400).json({ ok: false, message: 'Username and password are required to approve a team member.' });
+    }
+
+    const email = registration.email.toLowerCase();
+    const existingTeamUser = await User.findOne({ email, role: 'team' });
+    const conflictingUser = await User.findOne({ username });
+    if (conflictingUser && String(conflictingUser._id) !== String(existingTeamUser?._id)) {
+      return res.status(409).json({ ok: false, message: 'An account already exists with this email or username.' });
+    }
+
+    if (existingTeamUser) {
+      existingTeamUser.name = registration.name;
+      existingTeamUser.username = username;
+      existingTeamUser.password = await hashPassword(password);
+      existingTeamUser.phone = registration.mobile;
+      await existingTeamUser.save();
+    } else {
+      const emailUser = await User.findOne({ email });
+      if (emailUser) return res.status(409).json({ ok: false, message: 'An account already exists with this email.' });
+      await User.create({
+        name: registration.name,
+        email,
+        username,
+        password: await hashPassword(password),
+        phone: registration.mobile,
+        role: 'team',
+      });
+    }
+    registration.username = username;
+    registration.password = undefined;
+    registration.status = 'ACCEPTED';
+    await registration.save();
+
+    res.json({ ok: true, registration: registration.toJSON() });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/team/registrations/{id}/credentials:
+ *   patch:
+ *     summary: Update credentials for an accepted team registration
+ *     tags: [Team]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password]
+ *             properties:
+ *               username: { type: string }
+ *               password: { type: string }
+ *     responses:
+ *       200: { description: Credentials updated }
+ *       404: { description: Registration or account not found }
+ */
+app.patch('/api/team/registrations/:id/credentials', async (req, res) => {
+  try {
+    const registration = await TeamRegistration.findById(req.params.id);
+    if (!registration) return res.status(404).json({ ok: false, message: 'Registration not found' });
+    if (registration.status !== 'ACCEPTED') {
+      return res.status(400).json({ ok: false, message: 'Approve the registration before updating its credentials.' });
+    }
+
+    const username = String(req.body?.username ?? '').trim();
+    const password = String(req.body?.password ?? '').trim();
+    if (!username || !password) return res.status(400).json({ ok: false, message: 'Username and new password are required.' });
+
+    const user = await User.findOne({ email: registration.email.toLowerCase(), role: 'team' });
+    if (!user) return res.status(404).json({ ok: false, message: 'Team login account not found.' });
+    const conflictingUser = await User.findOne({ username });
+    if (conflictingUser && String(conflictingUser._id) !== String(user._id)) {
+      return res.status(409).json({ ok: false, message: 'That username is already assigned to another account.' });
+    }
+
+    user.username = username;
+    user.password = await hashPassword(password);
+    await user.save();
+    registration.username = username;
+    await registration.save();
+    res.json({ ok: true, registration: registration.toJSON() });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });
   }
@@ -814,6 +1031,102 @@ app.patch('/api/projects/:id/negotiation', async (req, res) => {
 
 /**
  * @openapi
+ * /api/projects/{id}/accept-request:
+ *   patch:
+ *     summary: Accept a client project request and enable the contract form
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Request accepted
+ *       404:
+ *         description: Project not found
+ */
+app.patch('/api/projects/:id/accept-request', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+
+    project.requestAcceptedAt = project.requestAcceptedAt || new Date();
+    await project.save();
+    res.json({ ok: true, project: project.toJSON() });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/projects/{id}/contract-details:
+ *   patch:
+ *     summary: Submit client contract contact details
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone, email, preferredContact, bestTimeToContact]
+ *             properties:
+ *               phone: { type: string }
+ *               email: { type: string, format: email }
+ *               preferredContact: { type: string, enum: [PHONE, EMAIL, WHATSAPP] }
+ *               bestTimeToContact: { type: string }
+ *               message: { type: string }
+ *     responses:
+ *       200:
+ *         description: Contract details saved
+ *       400:
+ *         description: Request has not been accepted or details are invalid
+ *       404:
+ *         description: Project not found
+ */
+app.patch('/api/projects/:id/contract-details', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+    if (!project.requestAcceptedAt) {
+      return res.status(400).json({ ok: false, message: 'The project request must be accepted before submitting contract details.' });
+    }
+
+    const phone = String(req.body?.phone ?? '').trim();
+    const email = String(req.body?.email ?? '').trim().toLowerCase();
+    const preferredContact = String(req.body?.preferredContact ?? '').trim().toUpperCase();
+    const bestTimeToContact = String(req.body?.bestTimeToContact ?? '').trim();
+    const message = String(req.body?.message ?? '').trim();
+    if (!phone || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !['PHONE', 'EMAIL', 'WHATSAPP'].includes(preferredContact) || !bestTimeToContact) {
+      return res.status(400).json({ ok: false, message: 'Valid phone, email, contact preference, and best time are required.' });
+    }
+
+    project.clientContactDetails = {
+      phone,
+      email,
+      preferredContact,
+      bestTimeToContact,
+      ...(message ? { message } : {}),
+      submittedAt: new Date().toISOString(),
+    };
+    await project.save();
+    res.json({ ok: true, project: project.toJSON() });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error.message });
+  }
+});
+
+/**
+ * @openapi
  * /api/projects/{id}/accept-quote:
  *   patch:
  *     summary: Accept a quote
@@ -966,9 +1279,19 @@ app.patch('/api/projects/:id/reject-negotiation', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [screenshotDataUrl, screenshotFileName]
+ *             properties:
+ *               screenshotDataUrl: { type: string, description: Base64 image data URL }
+ *               screenshotFileName: { type: string }
  *     responses:
  *       200:
- *         description: Advance payment recorded
+ *         description: Payment proof submitted for admin review
  */
 app.patch('/api/projects/:id/pay-advance', async (req, res) => {
   try {
@@ -977,14 +1300,79 @@ app.patch('/api/projects/:id/pay-advance', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Project not found' });
     }
 
+    if (project.clientResponse?.type !== 'ACCEPTED' && project.negotiationResponse?.type !== 'ACCEPTED') {
+      return res.status(400).json({ ok: false, message: 'Accept the quote or negotiation before submitting payment proof.' });
+    }
+
+    const screenshotDataUrl = String(req.body?.screenshotDataUrl ?? '');
+    const screenshotFileName = String(req.body?.screenshotFileName ?? '').trim();
+    const imageMatch = screenshotDataUrl.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i);
+    if (!imageMatch || !screenshotFileName) {
+      return res.status(400).json({ ok: false, message: 'Upload a PNG, JPEG, or WebP payment screenshot.' });
+    }
+
+    const imageBytes = Buffer.from(imageMatch[2], 'base64');
+    if (imageBytes.length === 0 || imageBytes.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ ok: false, message: 'Payment screenshot must be smaller than 5 MB.' });
+    }
+
+    if (project.payment?.status === 'PAID') {
+      return res.status(409).json({ ok: false, message: 'This advance payment has already been verified.' });
+    }
+
     project.payment = {
-      advancePercent: req.body.advancePercent || 50,
-      amount: req.body.amount || 0,
-      status: 'PAID',
-      paidAt: new Date().toISOString(),
+      ...project.payment,
+      advancePercent: project.payment?.advancePercent ?? project.negotiation?.advancePercent ?? project.initialQuote?.advancePercent ?? 30,
+      amount: project.payment?.amount ?? 0,
+      status: 'PROOF_SUBMITTED',
+      screenshotDataUrl,
+      screenshotFileName,
+      proofSubmittedAt: new Date().toISOString(),
     };
     await project.save();
-    res.json({ ok: true, project });
+    res.json({ ok: true, project: project.toJSON() });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/projects/{id}/verify-payment:
+ *   patch:
+ *     summary: Verify submitted advance payment proof
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Advance payment verified
+ *       400:
+ *         description: Payment proof has not been submitted
+ *       404:
+ *         description: Project not found
+ */
+app.patch('/api/projects/:id/verify-payment', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+    if (project.payment?.status !== 'PROOF_SUBMITTED' || !project.payment?.screenshotDataUrl) {
+      return res.status(400).json({ ok: false, message: 'There is no payment proof awaiting verification.' });
+    }
+
+    const verifiedAt = new Date().toISOString();
+    project.payment = {
+      ...project.payment,
+      status: 'PAID',
+      paidAt: verifiedAt,
+      verifiedAt,
+    };
+    await project.save();
+    res.json({ ok: true, project: project.toJSON() });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });
   }
@@ -1013,20 +1401,103 @@ app.post('/api/projects/:id/team-interest', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Project not found' });
     }
 
+    const member = String(req.body?.member ?? '').trim();
+    const memberEmail = String(req.body?.memberEmail ?? '').trim().toLowerCase();
+    if (!member || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(memberEmail)) {
+      return res.status(400).json({ ok: false, message: 'A team member name and valid email are required.' });
+    }
+
+    const existingInterest = (project.teamInterest || []).find((item) => String(item.memberEmail).toLowerCase() === memberEmail);
+    if (existingInterest?.status === 'PENDING' || existingInterest?.status === 'ACCEPTED') {
+      return res.status(409).json({ ok: false, message: 'You already have an active interest request for this event.' });
+    }
+
     const interest = {
-      member: req.body.member,
-      memberEmail: req.body.memberEmail,
+      member,
+      memberEmail,
       requestedAt: new Date().toISOString(),
       status: 'PENDING',
     };
 
-    project.teamInterest = [...(project.teamInterest || []), interest];
+    project.teamInterest = existingInterest
+      ? project.teamInterest.map((item) => String(item.memberEmail).toLowerCase() === memberEmail ? interest : item)
+      : [...(project.teamInterest || []), interest];
     await project.save();
-    res.status(201).json({ ok: true, project, interest });
+    res.status(201).json({ ok: true, project: project.toJSON(), interest });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });
   }
 });
+
+/**
+ * @openapi
+ * /api/projects/{id}/team-interest/{email}/approve:
+ *   patch:
+ *     summary: Approve a team member's interest request
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema: { type: string, format: email }
+ *     responses:
+ *       200: { description: Interest approved }
+ *       404: { description: Project or interest not found }
+ */
+app.patch('/api/projects/:id/team-interest/:email/approve', async (req, res) => {
+  return updateTeamInterestStatus(req, res, 'ACCEPTED');
+});
+
+/**
+ * @openapi
+ * /api/projects/{id}/team-interest/{email}/reject:
+ *   patch:
+ *     summary: Reject a team member's interest request
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema: { type: string, format: email }
+ *     responses:
+ *       200: { description: Interest rejected }
+ *       404: { description: Project or interest not found }
+ */
+app.patch('/api/projects/:id/team-interest/:email/reject', async (req, res) => {
+  return updateTeamInterestStatus(req, res, 'REJECTED');
+});
+
+async function updateTeamInterestStatus(req, res, status) {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+
+    const memberEmail = decodeURIComponent(req.params.email).trim().toLowerCase();
+    const interest = (project.teamInterest || []).find((item) => String(item.memberEmail).toLowerCase() === memberEmail);
+    if (!interest) return res.status(404).json({ ok: false, message: 'Team interest request not found' });
+    if (interest.status !== 'PENDING') {
+      return res.status(409).json({ ok: false, message: 'This interest request has already been reviewed.' });
+    }
+
+    project.teamInterest = project.teamInterest.map((item) => {
+      if (String(item.memberEmail).toLowerCase() !== memberEmail) return item;
+      const currentInterest = typeof item.toObject === 'function' ? item.toObject() : item;
+      return { ...currentInterest, status };
+    });
+    await project.save();
+    res.json({ ok: true, project: project.toJSON() });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error.message });
+  }
+}
 
 /**
  * @openapi
@@ -1180,7 +1651,6 @@ const connectMongo = async () => {
     console.log('Seeded default auth users');
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
-    process.exit(1);
   }
 };
 

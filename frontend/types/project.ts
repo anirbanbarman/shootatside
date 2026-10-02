@@ -47,8 +47,12 @@ export interface Negotiation {
 export interface AdvancePayment {
   advancePercent: number;
   amount: number;
-  status: "PENDING" | "PAID";
+  status: "PENDING" | "PROOF_SUBMITTED" | "PAID";
   paidAt?: string;
+  screenshotDataUrl?: string;
+  screenshotFileName?: string;
+  proofSubmittedAt?: string;
+  verifiedAt?: string;
 }
 
 export interface ClientResponse {
@@ -197,7 +201,9 @@ export interface TeamRegistration {
   email: string;
   address: string;
   aadharFileName: string;
+  aadharDataUrl?: string;
   selfieFileName: string;
+  selfieDataUrl?: string;
   phonePe: string;
   preferredRoles: TeamMemberRole[];
   username?: string;

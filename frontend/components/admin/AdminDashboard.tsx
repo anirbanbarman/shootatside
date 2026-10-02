@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
@@ -12,7 +12,7 @@ import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
-import { EDITING_ROLES, TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamUserType } from "@/types/project";
+import { EDITING_ROLES, TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamRegistration, type TeamUserType } from "@/types/project";
 import { formatCurrency, formatDate } from "@/utils/status";
 import { getTrackerMemberJoinTime } from "@/utils/notifications";
 
@@ -77,9 +77,10 @@ function TeamHierarchyBuilder() {
 export function TeamManagementPanel() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, rejectTeamRegistration, assignEventTeam, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
+  const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, updateTeamCredentials, uploadTeamRegistrationImages, rejectTeamRegistration, assignEventTeam, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
   const [editorCredentials, setEditorCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [registrationUploadDrafts, setRegistrationUploadDrafts] = useState<Record<string, Partial<Pick<TeamRegistration, "aadharFileName" | "aadharDataUrl" | "selfieFileName" | "selfieDataUrl">>>>({});
   const sectionFromPath = pathname.startsWith("/admin/team/") ? pathname.split("/").at(-1) : null;
   const sectionFromQuery = searchParams.get("section");
   const activeSubsection = sectionFromPath === "hierarchy"
@@ -108,6 +109,32 @@ export function TeamManagementPanel() {
     .filter(() => !interestDate || project.eventDate === interestDate)
     .map((interest) => ({ project, interest })));
 
+  const readRegistrationUpload = (registrationId: string, kind: "aadhar" | "selfie") => (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert("Each upload must be 2 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      const dataUrl = reader.result;
+      setRegistrationUploadDrafts((current) => ({
+        ...current,
+        [registrationId]: {
+          ...current[registrationId],
+          ...(kind === "aadhar"
+            ? { aadharFileName: file.name, aadharDataUrl: dataUrl }
+            : { selfieFileName: file.name, selfieDataUrl: dataUrl }),
+        },
+      }));
+    };
+    reader.onerror = () => window.alert("Unable to read that file. Please try again.");
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="dashboard-shell">
       <section className="page-intro">
@@ -128,27 +155,38 @@ export function TeamManagementPanel() {
         ) : (
           <div className="team-registration-list">
             {teamRegistrations.map((registration) => {
-              const formValues = credentials[registration.id] ?? { username: "", password: "" };
+              const formValues = credentials[registration.id] ?? { username: registration.username ?? "", password: "" };
+              const statusColor = registration.status === "ACCEPTED" ? "success" : registration.status === "REJECTED" ? "error" : "warning";
               return (
                 <article className="team-registration-item" key={registration.id}>
                   <div className="team-registration-heading">
                     <div><p className="eyebrow">{registration.id}</p><h3>{registration.name}</h3><p>{registration.email} · {registration.mobile}</p></div>
-                    <span className={`pill ${registration.status === "ACCEPTED" ? "success" : registration.status === "REJECTED" ? "danger" : "neutral"}`}>{registration.status}</span>
+                    <Chip size="small" color={statusColor} label={registration.status} />
                   </div>
                   <div className="team-registration-details">
                     <span>WhatsApp: {registration.whatsapp}</span><span>PhonePe: {registration.phonePe}</span><span>Address: {registration.address}</span>
                     <span>Aadhar: {registration.aadharFileName}</span><span>Selfie: {registration.selfieFileName}</span>
                     <span>Preferred roles: {registration.preferredRoles?.join(", ") || "No roles selected"}</span>
                   </div>
-                  {registration.preferredRoles?.some((role) => EDITING_ROLES.includes(role as (typeof EDITING_ROLES)[number])) ? <div className="success-box">Editor profile will be added to Editor Management after this registration is approved.</div> : null}
-                  {registration.status === "PENDING" ? <div className="team-registration-actions">
-                    <input aria-label={`Username for ${registration.name}`} placeholder="Set username" value={formValues.username} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, username: event.target.value } }))} />
-                    <input aria-label={`Password for ${registration.name}`} type="password" placeholder="Set password" value={formValues.password} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: event.target.value } }))} />
-                    <button type="button" className="success-button" onClick={() => {
-                      if (formValues.username.trim() && formValues.password.trim()) approveTeamRegistration(registration.id, formValues.username.trim(), formValues.password);
-                    }}>Accept &amp; Set Login</button>
-                    <button type="button" className="danger-button" onClick={() => rejectTeamRegistration(registration.id)}>Reject</button>
+                  <div className="editor-application-photos">
+                    {registration.aadharDataUrl?.startsWith("data:image/") ? <a href={registration.aadharDataUrl} target="_blank" rel="noreferrer" aria-label={`Open ID image for ${registration.name}`}><img className="team-registration-image" src={registration.aadharDataUrl} alt={`${registration.name} ID document`} /></a> : registration.aadharDataUrl ? <a href={registration.aadharDataUrl} target="_blank" rel="noreferrer">Open ID document · {registration.aadharFileName}</a> : <span className="form-note">ID image unavailable</span>}
+                    {registration.selfieDataUrl ? <a href={registration.selfieDataUrl} target="_blank" rel="noreferrer" aria-label={`Open selfie for ${registration.name}`}><img className="team-registration-image" src={registration.selfieDataUrl} alt={`${registration.name} selfie`} /></a> : <span className="form-note">Selfie unavailable</span>}
+                  </div>
+                  {!registration.aadharDataUrl || !registration.selfieDataUrl ? <div className="registration-image-repair">
+                    <strong>Upload missing registration photos</strong>
+                    <div className="team-registration-actions">
+                      {!registration.aadharDataUrl ? <label>ID image or PDF<input type="file" accept="image/*,.pdf" onChange={readRegistrationUpload(registration.id, "aadhar")} />{registrationUploadDrafts[registration.id]?.aadharFileName ? <small>{registrationUploadDrafts[registration.id]?.aadharFileName}</small> : null}</label> : null}
+                      {!registration.selfieDataUrl ? <label>Selfie image<input type="file" accept="image/*" onChange={readRegistrationUpload(registration.id, "selfie")} />{registrationUploadDrafts[registration.id]?.selfieFileName ? <small>{registrationUploadDrafts[registration.id]?.selfieFileName}</small> : null}</label> : null}
+                    </div>
+                    <button type="button" className="secondary-button" disabled={!registrationUploadDrafts[registration.id]?.aadharDataUrl && !registrationUploadDrafts[registration.id]?.selfieDataUrl} onClick={() => void uploadTeamRegistrationImages(registration.id, registrationUploadDrafts[registration.id] ?? {}).then(() => setRegistrationUploadDrafts((current) => { const next = { ...current }; delete next[registration.id]; return next; })).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to save registration photos."))}>Save photos</button>
                   </div> : null}
+                  {registration.preferredRoles?.some((role) => EDITING_ROLES.includes(role as (typeof EDITING_ROLES)[number])) ? <div className="success-box">Editor profile will be added to Editor Management after this registration is approved.</div> : null}
+                  <div className="team-registration-actions">
+                    <input aria-label={`Username for ${registration.name}`} placeholder="Username" value={formValues.username} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, username: event.target.value } }))} />
+                    <input aria-label={`Password for ${registration.name}`} type="password" placeholder={registration.status === "ACCEPTED" ? "Set a new password" : "Set password"} value={formValues.password} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: event.target.value } }))} />
+                    {registration.status === "ACCEPTED" ? <><span className="form-note">Password is stored securely as a hash; enter a new one to reset it.</span><button type="button" className="success-button" disabled={!formValues.username.trim() || !formValues.password.trim()} onClick={() => void updateTeamCredentials(registration.id, formValues.username.trim(), formValues.password).then(() => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: "" } }))).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to update credentials."))}>Update Login</button></> : <button type="button" className="success-button" disabled={!formValues.username.trim() || !formValues.password.trim()} onClick={() => void approveTeamRegistration(registration.id, formValues.username.trim(), formValues.password).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to approve registration."))}>{registration.status === "REJECTED" ? "Re-approve & Set Login" : "Accept & Set Login"}</button>}
+                    {registration.status === "PENDING" ? <button type="button" className="danger-button" onClick={() => void rejectTeamRegistration(registration.id).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to reject registration."))}>Reject</button> : null}
+                  </div>
                 </article>
               );
             })}
@@ -179,8 +217,8 @@ export function TeamManagementPanel() {
               {application.status === "PENDING" ? <div className="team-registration-actions">
                 <input aria-label={`Editor username for ${application.name}`} placeholder="Set editor username" value={currentEditorValues.username} onChange={(event) => setEditorCredentials((current) => ({ ...current, [application.id]: { ...currentEditorValues, username: event.target.value } }))} />
                 <input aria-label={`Editor password for ${application.name}`} type="password" placeholder="Set editor password" value={currentEditorValues.password} onChange={(event) => setEditorCredentials((current) => ({ ...current, [application.id]: { ...currentEditorValues, password: event.target.value } }))} />
-                <button type="button" className="success-button" onClick={() => { if (currentEditorValues.username.trim() && currentEditorValues.password.trim()) approveEditorApplication(application.id, currentEditorValues.username.trim(), currentEditorValues.password); }}>Approve</button>
-                <button type="button" className="danger-button" onClick={() => rejectEditorApplication(application.id)}>Reject</button>
+                <button type="button" className="success-button" onClick={() => { if (currentEditorValues.username.trim() && currentEditorValues.password.trim()) void approveEditorApplication(application.id, currentEditorValues.username.trim(), currentEditorValues.password).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to approve application.")); }}>Approve</button>
+                <button type="button" className="danger-button" onClick={() => void rejectEditorApplication(application.id).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to reject application."))}>Reject</button>
               </div> : null}
             </article>;
           })}</div>}
@@ -208,8 +246,8 @@ export function TeamManagementPanel() {
                     <span className="pill">{interest.status}</span>
                     {interest.status === "PENDING" ? (
                       <>
-                        <button type="button" className="success-button" onClick={() => approveTeamInterest(project.id, interest.memberEmail)}>Accept Request</button>
-                        <button type="button" className="danger-button" onClick={() => rejectTeamInterest(project.id, interest.memberEmail)}>Reject</button>
+                        <button type="button" className="success-button" onClick={() => void approveTeamInterest(project.id, interest.memberEmail).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to accept interest."))}>Accept Request</button>
+                        <button type="button" className="danger-button" onClick={() => void rejectTeamInterest(project.id, interest.memberEmail).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to reject interest."))}>Reject</button>
                       </>
                     ) : null}
                   </div>
@@ -262,13 +300,17 @@ export function TeamManagementPanel() {
 
 export function AdminDashboard() {
   const searchParams = useSearchParams();
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest, verifyAdvancePayment, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
   const [quoteError, setQuoteError] = useState("");
   const [quoteSuccess, setQuoteSuccess] = useState("");
   const [isSendingQuote, setIsSendingQuote] = useState(false);
+  const [requestAcceptError, setRequestAcceptError] = useState("");
+  const [isAcceptingRequest, setIsAcceptingRequest] = useState(false);
+  const [paymentVerificationError, setPaymentVerificationError] = useState("");
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [negotiationAmount, setNegotiationAmount] = useState("");
   const [negotiationComment, setNegotiationComment] = useState("");
   const [negotiationAdvancePercent, setNegotiationAdvancePercent] = useState("30");
@@ -305,6 +347,30 @@ export function AdminDashboard() {
   const handleProjectSelect = (projectId: string) => {
     setSelectedProjectId(projectId);
     setProjectDetailsOpen(true);
+  };
+
+  const handleAcceptClientRequest = async () => {
+    setIsAcceptingRequest(true);
+    setRequestAcceptError("");
+    try {
+      await acceptClientRequest(selectedProject.id);
+    } catch (requestError) {
+      setRequestAcceptError(requestError instanceof Error ? requestError.message : "Unable to accept this request. Please try again.");
+    } finally {
+      setIsAcceptingRequest(false);
+    }
+  };
+
+  const handleVerifyAdvancePayment = async () => {
+    setIsVerifyingPayment(true);
+    setPaymentVerificationError("");
+    try {
+      await verifyAdvancePayment(selectedProject.id);
+    } catch (verificationError) {
+      setPaymentVerificationError(verificationError instanceof Error ? verificationError.message : "Unable to verify payment. Please try again.");
+    } finally {
+      setIsVerifyingPayment(false);
+    }
   };
 
   const handleSendQuote = async () => {
@@ -434,7 +500,8 @@ export function AdminDashboard() {
             <div className="section-block">
               <p className="eyebrow">Client Information</p>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 1, alignItems: { sm: "center" } }}>
-                {selectedProject.requestAcceptedAt ? <Chip color="success" icon={<MarkEmailReadOutlinedIcon />} label={`Request accepted · ${new Date(selectedProject.requestAcceptedAt).toLocaleString()}`} /> : <Button variant="contained" startIcon={<MarkEmailReadOutlinedIcon />} onClick={() => acceptClientRequest(selectedProject.id)}>Accept Request &amp; Send Contract Form</Button>}
+                {selectedProject.requestAcceptedAt ? <Chip color="success" icon={<MarkEmailReadOutlinedIcon />} label={`Request accepted · ${new Date(selectedProject.requestAcceptedAt).toLocaleString()}`} /> : <Button variant="contained" disabled={isAcceptingRequest} startIcon={<MarkEmailReadOutlinedIcon />} onClick={handleAcceptClientRequest}>{isAcceptingRequest ? "Saving…" : "Accept Request &amp; Send Contract Form"}</Button>}
+                {requestAcceptError ? <Alert severity="error" sx={{ width: "100%" }}>{requestAcceptError}</Alert> : null}
               </Stack>
               {selectedProject.clientContactDetails ? <Alert severity="success" sx={{ mb: 1 }}><strong>Client contract form received</strong><br />Preferred contact: {selectedProject.clientContactDetails.preferredContact} · Best time: {selectedProject.clientContactDetails.bestTimeToContact}<br />Phone: {selectedProject.clientContactDetails.phone} · Email: {selectedProject.clientContactDetails.email}{selectedProject.clientContactDetails.message ? <><br />Message: {selectedProject.clientContactDetails.message}</> : null}</Alert> : selectedProject.requestAcceptedAt ? <Alert severity="info" sx={{ mb: 1 }}>The client contract form is now available in the Client Portal.</Alert> : null}
               <div className="field-grid">
@@ -526,6 +593,23 @@ export function AdminDashboard() {
                     <strong>Admin Comment</strong>
                     <p>{selectedProject.negotiation.comment}</p>
                   </div>
+                </div>
+              </div>
+            ) : null}
+
+            {selectedProject.payment?.screenshotDataUrl ? (
+              <div className="section-block">
+                <p className="eyebrow">Advance Payment Proof</p>
+                <div className="quote-box">
+                  <div className="quote-row"><strong>Payment status</strong><span>{selectedProject.payment.status === "PAID" ? "Verified" : "Awaiting verification"}</span></div>
+                  <div className="quote-row"><strong>Amount</strong><span>{formatCurrency(selectedProject.payment.amount)}</span></div>
+                  <div className="quote-row"><strong>Screenshot</strong><span>{selectedProject.payment.screenshotFileName ?? "Payment proof"}</span></div>
+                  {selectedProject.payment.proofSubmittedAt ? <div className="quote-row"><strong>Submitted</strong><span>{new Date(selectedProject.payment.proofSubmittedAt).toLocaleString()}</span></div> : null}
+                  <a href={selectedProject.payment.screenshotDataUrl} target="_blank" rel="noreferrer" aria-label="Open payment screenshot">
+                    <img src={selectedProject.payment.screenshotDataUrl} alt={`Advance payment screenshot for project ${selectedProject.id}`} style={{ display: "block", maxWidth: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb" }} />
+                  </a>
+                  {selectedProject.payment.status === "PROOF_SUBMITTED" ? <Button variant="contained" color="success" disabled={isVerifyingPayment} onClick={handleVerifyAdvancePayment}>{isVerifyingPayment ? "Verifying…" : "Verify Payment"}</Button> : null}
+                  {paymentVerificationError ? <Alert severity="error">{paymentVerificationError}</Alert> : null}
                 </div>
               </div>
             ) : null}

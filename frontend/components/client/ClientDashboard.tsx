@@ -25,6 +25,11 @@ export function ClientDashboard() {
   const [isNegotiationRejectModalOpen, setNegotiationRejectModalOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+  const [isProcessingDecision, setIsProcessingDecision] = useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isTimelineOpen, setTimelineOpen] = useState(false);
   const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [teamBrief, setTeamBrief] = useState({ callTime: "", callVenue: "" });
@@ -60,7 +65,7 @@ export function ClientDashboard() {
     setProjectDetailsOpen(true);
   };
 
-  const handleContactFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleContactFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const details = {
       ...contactForm,
@@ -68,50 +73,118 @@ export function ClientDashboard() {
       email: contactForm.email.trim() || selectedProject.client.email,
     };
     if (!details.phone.trim() || !details.email.trim() || !details.bestTimeToContact.trim()) return;
-    submitClientContactDetails(selectedProject.id, details);
+    setIsSubmittingContract(true);
+    setError("");
+    setFeedback("");
+    try {
+      await submitClientContactDetails(selectedProject.id, details);
+      setFeedback("Contract details sent successfully.");
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to send contract details. Please try again.");
+    } finally {
+      setIsSubmittingContract(false);
+    }
   };
 
-  const handleAcceptQuote = () => {
-    acceptQuote(selectedProject.id);
-    setFeedback("Quotation accepted successfully. Please complete the advance payment to confirm the booking.");
-    setConfirmModalOpen(false);
+  const handleAcceptQuote = async () => {
+    setIsProcessingDecision(true);
+    setError("");
+    try {
+      await acceptQuote(selectedProject.id);
+      setFeedback("Quotation accepted successfully. Please complete the advance payment to confirm the booking.");
+      setConfirmModalOpen(false);
+    } catch (decisionError) {
+      setError(decisionError instanceof Error ? decisionError.message : "Unable to accept the quote. Please try again.");
+    } finally {
+      setIsProcessingDecision(false);
+    }
   };
 
-  const handlePayAdvance = () => {
-    payAdvance(selectedProject.id);
-    setFeedback("Advance payment received. Booking is now confirmed.");
-    setPayAdvanceModalOpen(false);
+  const handlePayAdvance = async () => {
+    if (!paymentScreenshot) {
+      setPaymentError("Upload a payment screenshot before submitting.");
+      return;
+    }
+    if (!paymentScreenshot.type.startsWith("image/")) {
+      setPaymentError("Choose an image file for your payment screenshot.");
+      return;
+    }
+    if (paymentScreenshot.size > 5 * 1024 * 1024) {
+      setPaymentError("The screenshot must be smaller than 5 MB.");
+      return;
+    }
+
+    setIsSubmittingPayment(true);
+    setPaymentError("");
+    try {
+      const screenshotDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unable to read the screenshot."));
+        reader.onerror = () => reject(new Error("Unable to read the screenshot."));
+        reader.readAsDataURL(paymentScreenshot);
+      });
+      await payAdvance(selectedProject.id, screenshotDataUrl, paymentScreenshot.name);
+      setFeedback("Payment screenshot sent. The admin will review and confirm your payment.");
+      setPaymentScreenshot(null);
+      setPayAdvanceModalOpen(false);
+    } catch (submitError) {
+      setPaymentError(submitError instanceof Error ? submitError.message : "Unable to submit payment screenshot. Please try again.");
+    } finally {
+      setIsSubmittingPayment(false);
+    }
   };
 
-  const handleRejectQuote = () => {
+  const handleRejectQuote = async () => {
     if (!rejectText.trim()) {
       setError("Reason/comment is required.");
       return;
     }
 
-    rejectQuote(selectedProject.id, rejectText.trim());
-    setFeedback("Quotation rejected successfully.");
-    setRejectText("");
-    setRejectModalOpen(false);
+    setIsProcessingDecision(true);
     setError("");
+    try {
+      await rejectQuote(selectedProject.id, rejectText.trim());
+      setFeedback("Quotation rejected successfully.");
+      setRejectText("");
+      setRejectModalOpen(false);
+    } catch (decisionError) {
+      setError(decisionError instanceof Error ? decisionError.message : "Unable to reject the quote. Please try again.");
+    } finally {
+      setIsProcessingDecision(false);
+    }
   };
 
-  const handleAcceptNegotiation = () => {
-    acceptNegotiation(selectedProject.id);
-    setFeedback("Negotiation accepted successfully.");
+  const handleAcceptNegotiation = async () => {
+    setIsProcessingDecision(true);
+    setError("");
+    try {
+      await acceptNegotiation(selectedProject.id);
+      setFeedback("Negotiation accepted successfully.");
+    } catch (decisionError) {
+      setError(decisionError instanceof Error ? decisionError.message : "Unable to accept the negotiation. Please try again.");
+    } finally {
+      setIsProcessingDecision(false);
+    }
   };
 
-  const handleRejectNegotiation = () => {
+  const handleRejectNegotiation = async () => {
     if (!negotiationRejectText.trim()) {
       setError("Reason/comment is required.");
       return;
     }
 
-    rejectNegotiation(selectedProject.id, negotiationRejectText.trim());
-    setFeedback("Negotiation rejected successfully.");
-    setNegotiationRejectText("");
-    setNegotiationRejectModalOpen(false);
+    setIsProcessingDecision(true);
     setError("");
+    try {
+      await rejectNegotiation(selectedProject.id, negotiationRejectText.trim());
+      setFeedback("Negotiation rejected successfully.");
+      setNegotiationRejectText("");
+      setNegotiationRejectModalOpen(false);
+    } catch (decisionError) {
+      setError(decisionError instanceof Error ? decisionError.message : "Unable to reject the negotiation. Please try again.");
+    } finally {
+      setIsProcessingDecision(false);
+    }
   };
 
   return (
@@ -154,7 +227,7 @@ export function ClientDashboard() {
                     <TextField fullWidth required label="Best time to contact" placeholder="e.g. 10:00 AM–1:00 PM" value={contactForm.bestTimeToContact} onChange={(event) => setContactForm((current) => ({ ...current, bestTimeToContact: event.target.value }))} />
                   </Stack>
                   <TextField fullWidth multiline minRows={3} label="Message for the studio (optional)" value={contactForm.message} onChange={(event) => setContactForm((current) => ({ ...current, message: event.target.value }))} />
-                  <Box><Button type="submit" variant="contained" startIcon={<SendOutlinedIcon />}>Send Contract Details</Button></Box>
+                  <Box><Button type="submit" variant="contained" disabled={isSubmittingContract} startIcon={<SendOutlinedIcon />}>{isSubmittingContract ? "Sending…" : "Send Contract Details"}</Button></Box>
                 </Stack>
               </Box>
             </>}
@@ -229,7 +302,7 @@ export function ClientDashboard() {
 
                 {selectedProject.negotiation && !selectedProject.negotiationResponse && (
                   <div className="cta-row">
-                    <button type="button" className="success-button" onClick={handleAcceptNegotiation}>
+                    <button type="button" className="success-button" disabled={isProcessingDecision} onClick={handleAcceptNegotiation}>
                       Accept Negotiation
                     </button>
                     <button type="button" className="danger-button" onClick={() => setNegotiationRejectModalOpen(true)}>
@@ -240,16 +313,16 @@ export function ClientDashboard() {
 
                 {!selectedProject.negotiation && !selectedProject.clientResponse && (
                   <div className="cta-row">
-                    <button type="button" className="success-button" onClick={() => setConfirmModalOpen(true)}>
+                    <button type="button" className="success-button" disabled={isProcessingDecision} onClick={() => setConfirmModalOpen(true)}>
                       Accept Quote
                     </button>
-                    <button type="button" className="danger-button" onClick={() => setRejectModalOpen(true)}>
+                    <button type="button" className="danger-button" disabled={isProcessingDecision} onClick={() => setRejectModalOpen(true)}>
                       Reject Quote
                     </button>
                   </div>
                 )}
 
-                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && selectedProject.payment?.status !== "PAID" ? (
+                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
                   <div className="cta-row">
                     <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
                       Pay Advance {formatCurrency(advanceAmount)}
@@ -265,7 +338,7 @@ export function ClientDashboard() {
                   <div className="warning-box">Client rejected the quotation. Awaiting negotiation.</div>
                 ) : null}
 
-                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && selectedProject.payment?.status !== "PAID" ? (
+                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
                   <div className="cta-row">
                     <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
                       Pay Advance {formatCurrency(advanceAmount)}
@@ -275,6 +348,10 @@ export function ClientDashboard() {
 
                 {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && selectedProject.payment?.status === "PAID" ? (
                   <div className="success-box">Advance payment received. Negotiation accepted and booking confirmed.</div>
+                ) : null}
+
+                {selectedProject.payment?.status === "PROOF_SUBMITTED" ? (
+                  <Alert severity="info">Payment screenshot submitted. Your booking will be confirmed after admin verification.</Alert>
                 ) : null}
 
                 {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "REJECTED" ? (
@@ -306,8 +383,8 @@ export function ClientDashboard() {
             <button type="button" className="secondary-button" onClick={() => setConfirmModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="success-button" onClick={handleAcceptQuote}>
-              Confirm
+            <button type="button" className="success-button" disabled={isProcessingDecision} onClick={handleAcceptQuote}>
+              {isProcessingDecision ? "Saving…" : "Confirm"}
             </button>
           </>
         }
@@ -324,8 +401,8 @@ export function ClientDashboard() {
             <button type="button" className="secondary-button" onClick={() => setRejectModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="danger-button" onClick={handleRejectQuote}>
-              Reject Quote
+            <button type="button" className="danger-button" disabled={isProcessingDecision} onClick={handleRejectQuote}>
+              {isProcessingDecision ? "Saving…" : "Reject Quote"}
             </button>
           </>
         }
@@ -345,21 +422,28 @@ export function ClientDashboard() {
       <Modal
         title="Pay Advance"
         open={isPayAdvanceModalOpen}
-        onClose={() => setPayAdvanceModalOpen(false)}
+        onClose={() => { if (!isSubmittingPayment) setPayAdvanceModalOpen(false); }}
+        className="pay-advance-modal"
         actions={
           <>
-            <button type="button" className="secondary-button" onClick={() => setPayAdvanceModalOpen(false)}>
+            <button type="button" className="secondary-button pay-advance-cancel" disabled={isSubmittingPayment} onClick={() => setPayAdvanceModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="success-button" onClick={handlePayAdvance}>
-              Pay {formatCurrency(advanceAmount)}
+            <button type="button" className="success-button" disabled={isSubmittingPayment} onClick={handlePayAdvance}>
+              {isSubmittingPayment ? "Submitting…" : `Pay ${formatCurrency(advanceAmount)}`}
             </button>
           </>
         }
       >
         <div className="form-stack">
-          <p>Advance payment of {advancePercent}% is required to confirm this booking.</p>
+          <p>After paying the advance, upload your payment screenshot for admin verification.</p>
           <p><strong>Amount to pay:</strong> {formatCurrency(advanceAmount)}</p>
+          <div className="form-group">
+            <label htmlFor="payment-screenshot">Payment screenshot</label>
+            <input id="payment-screenshot" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { setPaymentScreenshot(event.target.files?.[0] ?? null); setPaymentError(""); }} />
+            {paymentScreenshot ? <small>{paymentScreenshot.name}</small> : null}
+          </div>
+          {paymentError ? <div className="error-box">{paymentError}</div> : null}
         </div>
       </Modal>
 
@@ -372,8 +456,8 @@ export function ClientDashboard() {
             <button type="button" className="secondary-button" onClick={() => setNegotiationRejectModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="danger-button" onClick={handleRejectNegotiation}>
-              Reject Negotiation
+            <button type="button" className="danger-button" disabled={isProcessingDecision} onClick={handleRejectNegotiation}>
+              {isProcessingDecision ? "Saving…" : "Reject Negotiation"}
             </button>
           </>
         }

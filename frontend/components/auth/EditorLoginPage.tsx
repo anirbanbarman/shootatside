@@ -55,27 +55,28 @@ export function EditorLoginPage() {
     setError("");
   };
 
-  const handleLogin = () => {
-    if (!loginEditor(username, password)) {
+  const handleLogin = async () => {
+    try {
+      await loginEditor(username, password);
+      router.replace("/editor");
+    } catch {
       setError("Editor login was not found. Approved editor applications can sign in with the credentials set by admin.");
-      return;
     }
-    router.replace("/editor");
   };
 
-  const handleApplicationSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleApplicationSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (Object.values(application).some((value) => !value.trim()) || editingRoles.length === 0) {
       setError("Complete all fields, upload both images, and select at least one editing specialty.");
       return;
     }
-    const accepted = submitEditorApplication({ ...application, editingRoles });
-    if (!accepted) {
-      setError("An application or editor account already exists for this email, or the required fields are missing.");
-      return;
+    try {
+      await submitEditorApplication({ ...application, editingRoles });
+      setSubmitted(true);
+      setError("");
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to submit application. Please try again.");
     }
-    setSubmitted(true);
-    setError("");
   };
 
   return <Box className="role-login-shell editor-login-shell">
@@ -88,8 +89,7 @@ export function EditorLoginPage() {
         </Box>
 
         {showApplication ? submitted ? <Stack spacing={2}>
-          <Alert severity="success">Application submitted. Admin will review your contact details, images, and specialties, then provide sign-in credentials if approved.</Alert>
-          <Button variant="contained" onClick={() => { setShowApplication(false); setSubmitted(false); }}>Back to editor sign in</Button>
+          <Alert severity="success">Application received.</Alert>
         </Stack> : <Box component="form" onSubmit={handleApplicationSubmit} className="editor-application-form">
           <Typography variant="h6" component="h2">Editor Application</Typography>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
