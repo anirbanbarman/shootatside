@@ -224,17 +224,39 @@ const seedDefaultUsers = async () => {
  *       200:
  *         description: Backend is running
  */
-app.get('/api/health', (req, res) => {
-  const databaseConnected = mongoose.connection.readyState === 1;
-  res.status(databaseConnected ? 200 : 503).json({
-    ok: databaseConnected,
-    api: 'running',
-    database: databaseConnected ? 'connected' : 'disconnected',
-    message: databaseConnected
-      ? 'ShootAtSide backend and database are ready'
-      : 'Backend is running, but MongoDB is unavailable',
-    timestamp: new Date().toISOString(),
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    await connectMongo();
+    return res.status(200).json({
+      ok: true,
+      api: 'running',
+      database: 'connected',
+      message: 'ShootAtSide backend and database are ready',
+      timestamp: new Date().toISOString(),
+    });
+  } catch {
+    return res.status(503).json({
+      ok: false,
+      api: 'running',
+      database: 'disconnected',
+      message: 'Backend is running, but MongoDB is unavailable. Check MONGODB_URI and MongoDB network access.',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health' || req.path.startsWith('/api-docs')) return next();
+
+  try {
+    await connectMongo();
+    return next();
+  } catch (error) {
+    return res.status(503).json({
+      ok: false,
+      message: 'Database is unavailable. Check the MONGODB_URI deployment environment variable and MongoDB network access.',
+    });
+  }
 });
 
 /**
@@ -1643,15 +1665,26 @@ app.post('/api/dev/seed', async (req, res) => {
   }
 });
 
+let mongoConnectionPromise;
+
 const connectMongo = async () => {
-  try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('MongoDB connected');
-    await seedDefaultUsers();
-    console.log('Seeded default auth users');
-  } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
+  if (mongoose.connection.readyState === 1) return;
+
+  if (!mongoConnectionPromise) {
+    mongoConnectionPromise = mongoose.connect(MONGODB_URI)
+      .then(async () => {
+        console.log('MongoDB connected');
+        await seedDefaultUsers();
+        console.log('Seeded default auth users');
+      })
+      .catch((error) => {
+        mongoConnectionPromise = null;
+        console.error('MongoDB connection failed:', error.message);
+        throw error;
+      });
   }
+
+  await mongoConnectionPromise;
 };
 
 if (require.main === module) {
