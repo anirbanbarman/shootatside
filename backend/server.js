@@ -25,7 +25,7 @@ const swaggerOptions = {
     },
     servers: [{ url: 'http://localhost:4000' }],
   },
-  apis: ['./src/server.js'],
+  apis: ['server.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
