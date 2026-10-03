@@ -78,12 +78,6 @@ export function ClientLoginPage() {
             Open My Portal
           </button>
 
-          <div className="demo-note">
-            <strong>Demo Client</strong>
-            <p>Name: Aisha Khan</p>
-            <p>Email: aisha.khan@example.com</p>
-            <p>Phone: +91 99887 66554</p>
-          </div>
         </div>
       </div>
     </div>
