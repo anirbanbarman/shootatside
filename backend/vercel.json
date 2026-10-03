@@ -1,6 +1,11 @@
 {
     "version": 2,
    "name": "shootatside-backend",
+      "functions": {
+         "server.js": {
+            "includeFiles": "node_modules/swagger-ui-dist/**"
+         }
+      },
     "builds": [
       
       { "src": "server.js",
