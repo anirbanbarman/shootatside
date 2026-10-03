@@ -5,9 +5,11 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
 import { EditorManagementPanel } from "@/components/admin/EditorManagementPanel";
-import { Box, Typography } from "@mui/material";
+import { Box, IconButton, InputAdornment, TextField, Typography } from "@mui/material";
 import { Alert, Button, Chip, Stack } from "@mui/material";
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { ProjectTable } from "@/components/common/ProjectTable";
 import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -79,6 +81,7 @@ export function TeamManagementPanel() {
   const searchParams = useSearchParams();
   const { projects, approveTeamInterest, rejectTeamInterest, teamRegistrations, approveTeamRegistration, updateTeamCredentials, uploadTeamRegistrationImages, rejectTeamRegistration, assignEventTeam, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [visibleRegistrationPasswords, setVisibleRegistrationPasswords] = useState<Record<string, boolean>>({});
   const [editorCredentials, setEditorCredentials] = useState<Record<string, { username: string; password: string }>>({});
   const [registrationUploadDrafts, setRegistrationUploadDrafts] = useState<Record<string, Partial<Pick<TeamRegistration, "aadharFileName" | "aadharDataUrl" | "selfieFileName" | "selfieDataUrl">>>>({});
   const sectionFromPath = pathname.startsWith("/admin/team/") ? pathname.split("/").at(-1) : null;
@@ -183,7 +186,20 @@ export function TeamManagementPanel() {
                   {registration.preferredRoles?.some((role) => EDITING_ROLES.includes(role as (typeof EDITING_ROLES)[number])) ? <div className="success-box">Editor profile will be added to Editor Management after this registration is approved.</div> : null}
                   <div className="team-registration-actions">
                     <input aria-label={`Username for ${registration.name}`} placeholder="Username" value={formValues.username} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, username: event.target.value } }))} />
-                    <input aria-label={`Password for ${registration.name}`} type="password" placeholder={registration.status === "ACCEPTED" ? "Set a new password" : "Set password"} value={formValues.password} onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: event.target.value } }))} />
+                    <TextField
+                      className="registration-password-field"
+                      size="small"
+                      label="Password"
+                      type={visibleRegistrationPasswords[registration.id] ? "text" : "password"}
+                      placeholder={registration.status === "ACCEPTED" ? "Set a new password" : "Set password"}
+                      value={formValues.password}
+                      onChange={(event) => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: event.target.value } }))}
+                      slotProps={{
+                        input: {
+                          endAdornment: <InputAdornment position="end"><IconButton edge="end" size="small" aria-label={visibleRegistrationPasswords[registration.id] ? "Hide password" : "Show password"} onClick={() => setVisibleRegistrationPasswords((current) => ({ ...current, [registration.id]: !current[registration.id] }))}>{visibleRegistrationPasswords[registration.id] ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}</IconButton></InputAdornment>,
+                        },
+                      }}
+                    />
                     {registration.status === "ACCEPTED" ? <><span className="form-note">Password is stored securely as a hash; enter a new one to reset it.</span><button type="button" className="success-button" disabled={!formValues.username.trim() || !formValues.password.trim()} onClick={() => void updateTeamCredentials(registration.id, formValues.username.trim(), formValues.password).then(() => setCredentials((current) => ({ ...current, [registration.id]: { ...formValues, password: "" } }))).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to update credentials."))}>Update Login</button></> : <button type="button" className="success-button" disabled={!formValues.username.trim() || !formValues.password.trim()} onClick={() => void approveTeamRegistration(registration.id, formValues.username.trim(), formValues.password).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to approve registration."))}>{registration.status === "REJECTED" ? "Re-approve & Set Login" : "Accept & Set Login"}</button>}
                     {registration.status === "PENDING" ? <button type="button" className="danger-button" onClick={() => void rejectTeamRegistration(registration.id).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to reject registration."))}>Reject</button> : null}
                   </div>

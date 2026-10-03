@@ -1840,6 +1840,14 @@ button {
   font-size: 0.9rem;
 }
 
+.team-registration-details > span {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 220px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .team-registration-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1848,10 +1856,31 @@ button {
 
 .team-registration-actions input {
   min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
+}
+
+.team-registration-actions .registration-password-field {
+  min-width: 0;
+  width: 100%;
+}
+
+.team-registration-actions .registration-password-field .MuiInputBase-root {
+  min-height: 44px;
+  background: #fff;
+}
+
+.team-registration-actions .registration-password-field .MuiInputBase-input {
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.team-registration-actions .registration-password-field .MuiInputAdornment-root {
+  margin-left: 2px;
 }
 
 .team-registration-actions button {
@@ -3579,6 +3608,7 @@ button.full-width {
   border: 1px solid var(--border);
   background: rgba(248, 248, 246, 0.82);
   background: var(--panel);
+}
 
 .editing-chat-description {
   margin: 0;
