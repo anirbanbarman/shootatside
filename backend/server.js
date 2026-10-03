@@ -1654,11 +1654,11 @@ const connectMongo = async () => {
   }
 };
 
-if (require.main === module) {
+
   connectMongo();
   app.listen(PORT, () => {
     console.log(`ShootAtSide backend running on http://localhost:${PORT}`);
   });
-}
+
 
 module.exports = app;
