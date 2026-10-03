@@ -1,11 +1,11 @@
 {
-  "name": "shootatside-backend",
+  "name": "backend",
   "version": "1.0.0",
-  "private": true,
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "server": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
