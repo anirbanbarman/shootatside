@@ -1,13 +1,19 @@
 {
     "version": 2,
-    "name": "TEST ",
+   "name": "shootatside-backend-final",
     "builds": [
-      
-      { "src": "server.js",
-       "use": "@vercel/node" }
+         {
+            "src": "server.js",
+            "use": "@vercel/node",
+            "config": {
+               "includeFiles": "node_modules/swagger-ui-dist/**"
+            }
+         }
     ],
     "routes": [
-       { "src": "/(.*)", 
-       "dest": "server.js" }
-    ]
- }
+         {
+            "src": "/(.*)",
+            "dest": "server.js"
+         }
+      ]
+}
