@@ -30,7 +30,7 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
