@@ -1,6 +1,6 @@
 {
     "version": 2,
-   "name": "shootatside-backend",
+   "name": "shootatside-backend-final",
       "functions": {
          "server.js": {
             "includeFiles": "node_modules/swagger-ui-dist/**"
