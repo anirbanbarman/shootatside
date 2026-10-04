@@ -384,7 +384,10 @@ app.use('/api/projects/:id', requireAuth, authorizeProjectAccess);
 
 function sendAuthResponse(res, role, payload) {
   if (!process.env.JWT_SECRET) {
-    return res.status(503).json({ ok: false, message: 'Server authentication is not configured.' });
+    return res.status(503).json({
+      ok: false,
+      message: 'Authentication is not configured. Add JWT_SECRET in Vercel Project Settings → Environment Variables, then redeploy.',
+    });
   }
 
   return res.json({
@@ -445,45 +448,33 @@ app.post('/api/auth/admin/login', async (req, res) => {
 app.post('/api/auth/client/login', async (req, res) => {
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   const phone = normalizePhone(req.body?.phone);
-  if (!email || !phone) {
-    return res.status(400).json({ ok: false, message: 'Enter both your registered email address and phone number.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || phone.length < 7 || phone.length > 15) {
+    return res.status(400).json({ ok: false, message: 'Enter a valid email address and a phone number containing 7–15 digits.' });
   }
 
-  const [emailUser, clients, emailProjects] = await Promise.all([
-    User.findOne({ email, role: 'client' }).select('name email phone role'),
-    User.find({ role: 'client', phone: { $exists: true, $ne: '' } }).select('name email phone role'),
-    Project.find({
-      $expr: {
-        $eq: [
-          { $toLower: { $trim: { input: { $ifNull: ['$client.email', ''] } } } },
-          email,
-        ],
-      },
-    }).select('client'),
+  const [emailUser, clients] = await Promise.all([
+    User.findOne({ email }).select('name email phone role'),
+    User.find({ phone: { $exists: true, $ne: '' } }).select('name email phone role'),
   ]);
   const phoneMatches = clients.filter((client) => normalizePhone(client.phone) === phone);
-  let user = emailUser && normalizePhone(emailUser.phone) === phone ? emailUser : null;
+  let user;
 
-  if (!user) {
-    if (emailUser) {
+  if (emailUser) {
+    if (emailUser.role !== 'client') {
+      return res.status(409).json({ ok: false, message: 'This email is already used by another account type.' });
+    }
+    if (normalizePhone(emailUser.phone) !== phone) {
       return res.status(401).json({ ok: false, message: 'This email is registered, but the phone number does not match.' });
     }
+    user = emailUser;
+  } else {
     if (phoneMatches.length) {
-      return res.status(401).json({ ok: false, message: 'This phone number is registered, but the email does not match.' });
-    }
-    const matchingProject = emailProjects.find((project) => normalizePhone(project.client?.phone) === phone);
-    if (!matchingProject) {
-      return res.status(emailProjects.length ? 401 : 404).json({
-        ok: false,
-        message: emailProjects.length
-          ? 'This email is registered, but the phone number does not match.'
-          : 'No client account matches those details. Use the email and phone number on your request.',
-      });
+      return res.status(409).json({ ok: false, message: 'This phone number is already registered. Sign in with its registered email or contact the studio.' });
     }
     user = await User.create({
-      name: matchingProject.client.name,
+      name: email.split('@')[0],
       email,
-      phone: matchingProject.client.phone,
+      phone,
       role: 'client',
     });
   }
@@ -1065,6 +1056,10 @@ app.post('/api/projects', async (req, res) => {
     const existingClient = await User.findOne({ email });
     if (existingClient && (existingClient.role !== 'client' || normalizePhone(existingClient.phone) !== normalizedPhone)) {
       return res.status(409).json({ ok: false, message: 'This email is already registered with different account details. Contact the studio before submitting another request.' });
+    }
+    const phoneOwners = await User.find({ phone: { $exists: true, $ne: '' } }).select('email phone');
+    if (phoneOwners.some((owner) => normalizePhone(owner.phone) === normalizedPhone && owner.email !== email)) {
+      return res.status(409).json({ ok: false, message: 'This phone number is already registered to another account.' });
     }
     if (!existingClient) {
       await User.create({

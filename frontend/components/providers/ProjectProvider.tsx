@@ -289,8 +289,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [currentUser?.role]);
 
   useEffect(() => {
-    void loadFromApi();
-  }, [loadFromApi]);
+    if (!isReady || !currentUser || !readSessionValue<string | null>(STORAGE_KEYS.token, null)) return;
+    const timer = window.setTimeout(() => void loadFromApi(currentUser.role ?? null), 0);
+    return () => window.clearTimeout(timer);
+  }, [currentUser, isReady, loadFromApi]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isReady) {
@@ -319,8 +321,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...user, role: "admin" });
     setActiveRole("admin");
     setView("admin");
-    void loadFromApi("admin");
-  }, [loadFromApi]);
+  }, []);
 
   const loginClient = useCallback(async (email: string, phone: string) => {
     const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/client/login", {
@@ -331,8 +332,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "client" });
     setActiveRole("client");
     setView("client");
-    await loadFromApi("client");
-  }, [loadFromApi]);
+  }, []);
 
   const loginTeam = useCallback(async (username: string, password: string) => {
     const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/team/login", {
@@ -343,9 +343,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "team" });
     setActiveRole("team");
     setView("team");
-    await loadFromApi("team");
     return true;
-  }, [loadFromApi]);
+  }, []);
 
   const loginEditor = useCallback(async (username: string, password: string) => {
     const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/editor/login", {
@@ -356,9 +355,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "editor" });
     setActiveRole("editor");
     setView("editor");
-    await loadFromApi("editor");
     return true;
-  }, [loadFromApi]);
+  }, []);
 
   const createEditor = useCallback((input: Omit<EditorAccount, "id" | "createdAt">) => {
     const email = input.email.trim().toLowerCase();

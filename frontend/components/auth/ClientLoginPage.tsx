@@ -38,7 +38,7 @@ export function ClientLoginPage() {
         </div>
 
         <form className="role-login-form" onSubmit={handleLogin}>
-          <p className="form-intro">Sign in with the email address and phone number registered to your client account.</p>
+          <p className="form-intro">First time here? Your client account is created with these details. Returning clients should use the same email and phone.</p>
 
           <div className="form-group">
             <label htmlFor="client-email">Email Address</label>
@@ -71,7 +71,7 @@ export function ClientLoginPage() {
           {error ? <div className="error-box">{error}</div> : null}
 
           <button type="submit" className="primary-button full-width">
-            Sign In
+            Continue
           </button>
 
         </form>
