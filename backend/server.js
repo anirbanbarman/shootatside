@@ -449,12 +449,20 @@ app.post('/api/auth/client/login', async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Enter both your registered email address and phone number.' });
   }
 
-  const [emailUser, clients] = await Promise.all([
+  const [emailUser, clients, emailProjects] = await Promise.all([
     User.findOne({ email, role: 'client' }).select('name email phone role'),
     User.find({ role: 'client', phone: { $exists: true, $ne: '' } }).select('name email phone role'),
+    Project.find({
+      $expr: {
+        $eq: [
+          { $toLower: { $trim: { input: { $ifNull: ['$client.email', ''] } } } },
+          email,
+        ],
+      },
+    }).select('client'),
   ]);
   const phoneMatches = clients.filter((client) => normalizePhone(client.phone) === phone);
-  const user = emailUser && normalizePhone(emailUser.phone) === phone ? emailUser : null;
+  let user = emailUser && normalizePhone(emailUser.phone) === phone ? emailUser : null;
 
   if (!user) {
     if (emailUser) {
@@ -463,7 +471,21 @@ app.post('/api/auth/client/login', async (req, res) => {
     if (phoneMatches.length) {
       return res.status(401).json({ ok: false, message: 'This phone number is registered, but the email does not match.' });
     }
-    return res.status(404).json({ ok: false, message: 'No client account matches those details. Use the email and phone number on your registration.' });
+    const matchingProject = emailProjects.find((project) => normalizePhone(project.client?.phone) === phone);
+    if (!matchingProject) {
+      return res.status(emailProjects.length ? 401 : 404).json({
+        ok: false,
+        message: emailProjects.length
+          ? 'This email is registered, but the phone number does not match.'
+          : 'No client account matches those details. Use the email and phone number on your request.',
+      });
+    }
+    user = await User.create({
+      name: matchingProject.client.name,
+      email,
+      phone: matchingProject.client.phone,
+      role: 'client',
+    });
   }
 
   if (phoneMatches.length > 1) {
