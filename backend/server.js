@@ -154,7 +154,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     username: { type: String, unique: true, sparse: true, trim: true },
-    password: { type: String, required: true },
+    password: { type: String, required: function passwordRequired() { return this.role !== 'client'; } },
     phone: String,
     editingRoles: [String],
     role: {
@@ -1033,12 +1033,28 @@ app.post('/api/projects', async (req, res) => {
   try {
     const { client, eventType, eventDate, venue, requirements } = req.body || {};
 
-    if (!client || !eventType) {
-      return res.status(400).json({ ok: false, message: 'Client and eventType are required' });
+    const email = String(client?.email ?? '').trim().toLowerCase();
+    const phone = String(client?.phone ?? '').trim();
+    const normalizedPhone = normalizePhone(phone);
+    if (!client || !eventType || !String(client.name ?? '').trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || normalizedPhone.length < 7 || normalizedPhone.length > 15) {
+      return res.status(400).json({ ok: false, message: 'Valid client name, email, phone, and event type are required.' });
+    }
+
+    const existingClient = await User.findOne({ email });
+    if (existingClient && (existingClient.role !== 'client' || normalizePhone(existingClient.phone) !== normalizedPhone)) {
+      return res.status(409).json({ ok: false, message: 'This email is already registered with different account details. Contact the studio before submitting another request.' });
+    }
+    if (!existingClient) {
+      await User.create({
+        name: String(client.name).trim(),
+        email,
+        phone,
+        role: 'client',
+      });
     }
 
     const project = await Project.create({
-      client,
+      client: { ...client, email, phone },
       eventType,
       eventDate,
       venue,
