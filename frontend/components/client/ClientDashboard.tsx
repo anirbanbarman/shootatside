@@ -15,7 +15,7 @@ import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, T
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 
 export function ClientDashboard() {
-  const { projects, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief, submitClientContactDetails } = useProjectContext();
+  const { projects, currentUser, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief, submitClientContactDetails } = useProjectContext();
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isRequestFormModalOpen, setRequestFormModalOpen] = useState(false);
@@ -35,11 +35,16 @@ export function ClientDashboard() {
   const [teamBrief, setTeamBrief] = useState({ callTime: "", callVenue: "" });
   const [contactForm, setContactForm] = useState({ phone: "", email: "", preferredContact: "PHONE" as "PHONE" | "EMAIL" | "WHATSAPP", bestTimeToContact: "", message: "" });
 
-  const clientProjects = useMemo(() => projects.filter((project) => project.client.email.includes("@") && project.client.phone), [projects]);
+  const clientProjects = useMemo(() => projects.filter((project) => {
+    if (currentUser?.role !== "client") return false;
+    const emailMatches = project.client.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase();
+    const phoneMatches = project.client.phone.replace(/\D/g, "") === currentUser.phone.replace(/\D/g, "");
+    return emailMatches || (Boolean(currentUser.phone) && phoneMatches);
+  }), [currentUser, projects]);
 
   const selectedProject = useMemo(
-    () => clientProjects.find((project) => project.id === selectedProjectId) ?? clientProjects[0] ?? projects[0],
-    [clientProjects, projects, selectedProjectId],
+    () => clientProjects.find((project) => project.id === selectedProjectId) ?? clientProjects[0],
+    [clientProjects, selectedProjectId],
   );
 
   if (!selectedProject) {

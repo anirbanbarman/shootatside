@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const { randomBytes, scrypt: scryptCallback, timingSafeEqual } = require('crypto');
+const { randomBytes, scrypt: scryptCallback, timingSafeEqual, createHmac } = require('crypto');
 const { promisify } = require('util');
 
 dotenv.config();
@@ -194,6 +194,59 @@ async function verifyPassword(password, storedHash) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+function createAuthToken(user) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET must be configured to issue login tokens.');
+  const payload = Buffer.from(JSON.stringify({
+    sub: user.email.toLowerCase(),
+    phone: user.phone || '',
+    role: user.role,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+  })).toString('base64url');
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function requireAuth(req, res, next) {
+  const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const [payload, signature] = token.split('.');
+  const secret = process.env.JWT_SECRET;
+  if (!secret || !payload || !signature) return res.status(401).json({ ok: false, message: 'Sign in to access projects.' });
+
+  const expected = createHmac('sha256', secret).update(payload).digest();
+  const received = Buffer.from(signature, 'base64url');
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+    return res.status(401).json({ ok: false, message: 'Your session is invalid. Please sign in again.' });
+  }
+
+  try {
+    const user = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!user.sub || !user.role || user.exp <= Math.floor(Date.now() / 1000)) {
+      return res.status(401).json({ ok: false, message: 'Your session has expired. Please sign in again.' });
+    }
+    req.auth = user;
+    return next();
+  } catch {
+    return res.status(401).json({ ok: false, message: 'Your session is invalid. Please sign in again.' });
+  }
+}
+
+function projectAccessFilter(user) {
+  if (user.role === 'admin') return {};
+  if (user.role === 'client') {
+    const matches = [{ 'client.email': user.sub }];
+    if (user.phone) matches.push({ 'client.phone': user.phone });
+    return { $or: matches };
+  }
+  if (user.role === 'team') return { 'eventTeam.memberEmail': user.sub };
+  if (user.role === 'editor') return { 'editingWorkflow.assignedEditorEmail': user.sub };
+  return null;
+}
+
+function normalizePhone(phone) {
+  return String(phone ?? '').replace(/\D/g, '');
+}
+
 const seedDefaultUsers = async () => {
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   const defaults = [
@@ -289,9 +342,14 @@ app.use(async (req, res, next) => {
  */
 
 function sendAuthResponse(res, role, payload) {
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({ ok: false, message: 'Server authentication is not configured.' });
+  }
+
   return res.json({
     ok: true,
     role,
+    token: createAuthToken({ ...payload, role }),
     user: {
       name: payload.name,
       email: payload.email,
@@ -331,9 +389,9 @@ app.post('/api/auth/admin/login', async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password]
+ *             required: [phone, password]
  *             properties:
- *               email:
+ *               phone:
  *                 type: string
  *               password:
  *                 type: string
@@ -344,10 +402,11 @@ app.post('/api/auth/admin/login', async (req, res) => {
  *         description: Invalid client credentials
  */
 app.post('/api/auth/client/login', async (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const phone = normalizePhone(req.body?.phone);
   const password = String(req.body?.password ?? '').trim();
-
-  const user = await User.findOne({ email, role: 'client' });
+  const clients = phone ? await User.find({ role: 'client' }).select('name email phone password') : [];
+  const matchingClients = clients.filter((client) => normalizePhone(client.phone) === phone);
+  const user = matchingClients.length === 1 ? matchingClients[0] : null;
 
   if (user && await verifyPassword(password, user.password)) {
     return sendAuthResponse(res, 'client', {
@@ -885,9 +944,11 @@ app.patch('/api/team/registrations/:id/reject', async (req, res) => {
  *       200:
  *         description: Projects list
  */
-app.get('/api/projects', async (req, res) => {
+app.get('/api/projects', requireAuth, async (req, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 });
+    const accessFilter = projectAccessFilter(req.auth);
+    if (!accessFilter) return res.status(403).json({ ok: false, message: 'This account cannot access projects.' });
+    const projects = await Project.find(accessFilter).sort({ createdAt: -1 });
     res.json(projects.map((project) => project.toJSON()));
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });
@@ -950,9 +1011,11 @@ app.post('/api/projects', async (req, res) => {
  *       200:
  *         description: Project object
  */
-app.get('/api/projects/:id', async (req, res) => {
+app.get('/api/projects/:id', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
+    const accessFilter = projectAccessFilter(req.auth);
+    if (!accessFilter) return res.status(403).json({ ok: false, message: 'This account cannot access projects.' });
+    const project = await Project.findOne({ _id: req.params.id, ...accessFilter });
 
     if (!project) {
       return res.status(404).json({ ok: false, message: 'Project not found' });

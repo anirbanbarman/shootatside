@@ -34,8 +34,8 @@ interface ProjectContextValue {
   isReady: boolean;
   activeRole: ViewMode | "guest";
   currentUser: SessionUser | null;
-  loginAdmin: (user: SessionUser) => void;
-  loginClient: (user: SessionUser) => void;
+  loginAdmin: (user: SessionUser, token: string) => void;
+  loginClient: (phone: string, password: string) => Promise<void>;
   loginTeam: (username: string, password: string) => Promise<boolean>;
   loginEditor: (username: string, password: string) => Promise<boolean>;
   editors: EditorAccount[];
@@ -105,6 +105,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/a
 const STORAGE_KEYS = {
   selectedProjectId: "shootatside-selected-project-id",
   user: "shootatside-current-user",
+  token: "shootatside-auth-token",
   roleState: "shootatside-role-state",
 } as const;
 
@@ -113,6 +114,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(typeof window !== "undefined" && readSessionValue<string | null>(STORAGE_KEYS.token, null)
+        ? { Authorization: `Bearer ${readSessionValue<string>(STORAGE_KEYS.token, "")}` }
+        : {}),
       ...(options.headers ?? {}),
     },
   });
@@ -310,39 +314,51 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const isLoggedIn = Boolean(currentUser);
 
-  const loginAdmin = useCallback((user: SessionUser) => {
+  const loginAdmin = useCallback((user: SessionUser, token: string) => {
+    writeSessionValue(STORAGE_KEYS.token, token);
     setCurrentUser({ ...user, role: "admin" });
     setActiveRole("admin");
     setView("admin");
-  }, []);
+    void loadFromApi();
+  }, [loadFromApi]);
 
-  const loginClient = useCallback((user: SessionUser) => {
-    setCurrentUser({ ...user, role: "client" });
+  const loginClient = useCallback(async (phone: string, password: string) => {
+    const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/client/login", {
+      method: "POST",
+      body: JSON.stringify({ phone: phone.trim(), password }),
+    });
+    writeSessionValue(STORAGE_KEYS.token, response.token);
+    setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "client" });
     setActiveRole("client");
     setView("client");
-  }, []);
+    await loadFromApi();
+  }, [loadFromApi]);
 
   const loginTeam = useCallback(async (username: string, password: string) => {
-    const response = await fetchApi<{ ok: boolean; user: SessionUser }>("/auth/team/login", {
+    const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/team/login", {
       method: "POST",
       body: JSON.stringify({ username: username.trim(), password }),
     });
+    writeSessionValue(STORAGE_KEYS.token, response.token);
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "team" });
     setActiveRole("team");
     setView("team");
+    await loadFromApi();
     return true;
-  }, []);
+  }, [loadFromApi]);
 
   const loginEditor = useCallback(async (username: string, password: string) => {
-    const response = await fetchApi<{ ok: boolean; user: SessionUser }>("/auth/editor/login", {
+    const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/editor/login", {
       method: "POST",
       body: JSON.stringify({ username: username.trim(), password }),
     });
+    writeSessionValue(STORAGE_KEYS.token, response.token);
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "editor" });
     setActiveRole("editor");
     setView("editor");
+    await loadFromApi();
     return true;
-  }, [editors]);
+  }, [loadFromApi]);
 
   const createEditor = useCallback((input: Omit<EditorAccount, "id" | "createdAt">) => {
     const email = input.email.trim().toLowerCase();
@@ -477,6 +493,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    writeSessionValue(STORAGE_KEYS.token, null);
     setCurrentUser(null);
     setActiveRole("guest");
     setView("admin");

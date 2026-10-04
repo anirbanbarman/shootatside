@@ -381,6 +381,27 @@ button {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.stat-card:hover,
+.stat-card:focus-visible,
+.stat-card-active {
+  border-color: rgba(54, 92, 120, 0.45);
+  box-shadow: 0 12px 28px rgba(54, 92, 120, 0.12);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card:focus-visible {
+  outline: 3px solid rgba(54, 92, 120, 0.28);
+  outline-offset: 2px;
 }
 
 .stat-card-top {
@@ -578,15 +599,19 @@ button {
 @media (max-width: 940px) {
   .nav-links {
     position: absolute;
-    top: 72px;
-    left: 20px;
-    right: 20px;
+    top: 100%;
+    left: 50%;
+    right: auto;
+    width: 100vw;
+    max-width: none;
+    box-sizing: border-box;
+    transform: translateX(-50%);
     display: none;
     flex-direction: column;
     align-items: flex-start;
     background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(17, 24, 39, 0.08);
-    border-radius: 16px;
+    border-radius: 0 0 16px 16px;
     padding: 18px 16px;
     box-shadow: 0 18px 36px rgba(17, 24, 39, 0.06);
   }
@@ -2776,6 +2801,27 @@ button {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 12px 26px rgba(31, 41, 55, 0.04);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.stat-card:hover,
+.stat-card:focus-visible,
+.stat-card-active {
+  border-color: rgba(54, 92, 120, 0.45);
+  box-shadow: 0 12px 28px rgba(54, 92, 120, 0.12);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card:focus-visible {
+  outline: 3px solid rgba(54, 92, 120, 0.28);
+  outline-offset: 2px;
 }
 
 .stat-label {

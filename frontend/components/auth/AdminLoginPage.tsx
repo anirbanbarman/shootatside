@@ -41,7 +41,7 @@ export function AdminLoginPage() {
         email: data.user?.email ?? normalizedEmail,
         phone: data.user?.phone ?? "",
         role: "admin",
-      });
+      }, data.token);
       router.replace("/admin");
     } catch {
       setError("Unable to reach the backend. Please try again.");

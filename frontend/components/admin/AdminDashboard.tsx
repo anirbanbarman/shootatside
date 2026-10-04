@@ -15,7 +15,7 @@ import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { EDITING_ROLES, TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamRegistration, type TeamUserType } from "@/types/project";
-import { formatCurrency, formatDate } from "@/utils/status";
+import { formatCurrency, formatDate, getProjectStatus } from "@/utils/status";
 import { getTrackerMemberJoinTime } from "@/utils/notifications";
 
 function LiveTrackerPanel() {
@@ -335,6 +335,7 @@ export function AdminDashboard() {
   const [isTimelineOpen, setTimelineOpen] = useState(false);
   const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
+  const [dashboardFilter, setDashboardFilter] = useState<"all" | "upcoming" | "active" | "pending">("all");
   const isTeamManagement = Boolean(searchParams.get("section"));
   const [editorCredentials, setEditorCredentials] = useState<Record<string, { username: string; password: string }>>({});
 
@@ -347,17 +348,29 @@ export function AdminDashboard() {
     return <div className="empty-state">No projects available.</div>;
   }
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isUpcoming = (project: (typeof projects)[number]) => {
+    const date = new Date(`${project.eventDate}T00:00:00`);
+    return !Number.isNaN(date.getTime()) && date >= today;
+  };
+  const isActiveBooking = (project: (typeof projects)[number]) => ["QUOTE_ACCEPTED", "NEGOTIATION_ACCEPTED", "PROJECT_CONFIRMED"].includes(getProjectStatus(project));
+  const isPendingWorkflow = (project: (typeof projects)[number]) => ["NEW_REQUEST", "QUOTE_SENT", "NEGOTIATION_SENT"].includes(getProjectStatus(project));
   const counts = {
-    totalInquiries: 5,
-    upcomingEvents: 3,
-    activeBookings: 0,
-    pendingWorkflows: 3,
+    totalInquiries: projects.length,
+    upcomingEvents: projects.filter(isUpcoming).length,
+    activeBookings: projects.filter(isActiveBooking).length,
+    pendingWorkflows: projects.filter(isPendingWorkflow).length,
   };
   const completedEventsAwaitingEditors = projects.filter((project) => project.eventTracker?.eventCompletedAt && !project.editingWorkflow?.assignedEditorEmail).length;
 
   const filteredProjects = projects.filter((project) => {
     const query = projectFilter.trim().toLowerCase();
-    return !query || [project.id, project.client.name, project.eventType, project.venue].some((value) => value.toLowerCase().includes(query));
+    const matchesCard = dashboardFilter === "all"
+      || (dashboardFilter === "upcoming" && isUpcoming(project))
+      || (dashboardFilter === "active" && isActiveBooking(project))
+      || (dashboardFilter === "pending" && isPendingWorkflow(project));
+    return matchesCard && (!query || [project.id, project.client.name, project.eventType, project.venue].some((value) => value.toLowerCase().includes(query)));
   });
 
   const handleProjectSelect = (projectId: string) => {
@@ -470,40 +483,40 @@ export function AdminDashboard() {
       {completedEventsAwaitingEditors > 0 ? <div className="success-box admin-completion-notice"><strong>{completedEventsAwaitingEditors} event{completedEventsAwaitingEditors === 1 ? "" : "s"} completed.</strong> Review editor interest and assign post-production work. <a href="/admin/editing">Open Editor Management →</a></div> : null}
 
       <div className="stats-grid">
-        <div className="stat-card">
+        <button type="button" className={`stat-card${dashboardFilter === "all" ? " stat-card-active" : ""}`} aria-pressed={dashboardFilter === "all"} onClick={() => setDashboardFilter("all")}>
           <div className="stat-card-top">
             <span className="stat-icon" aria-hidden="true">📩</span>
             <span className="stat-label">Total Inquiries</span>
           </div>
           <strong>{counts.totalInquiries}</strong>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button type="button" className={`stat-card${dashboardFilter === "upcoming" ? " stat-card-active" : ""}`} aria-pressed={dashboardFilter === "upcoming"} onClick={() => setDashboardFilter("upcoming")}>
           <div className="stat-card-top">
             <span className="stat-icon" aria-hidden="true">📅</span>
             <span className="stat-label">Upcoming Events</span>
           </div>
           <strong>{counts.upcomingEvents}</strong>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button type="button" className={`stat-card${dashboardFilter === "active" ? " stat-card-active" : ""}`} aria-pressed={dashboardFilter === "active"} onClick={() => setDashboardFilter("active")}>
           <div className="stat-card-top">
             <span className="stat-icon" aria-hidden="true">📌</span>
             <span className="stat-label">Active Bookings</span>
           </div>
           <strong>{counts.activeBookings}</strong>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button type="button" className={`stat-card${dashboardFilter === "pending" ? " stat-card-active" : ""}`} aria-pressed={dashboardFilter === "pending"} onClick={() => setDashboardFilter("pending")}>
           <div className="stat-card-top">
             <span className="stat-icon" aria-hidden="true">🛠️</span>
             <span className="stat-label">Pending Workflows</span>
           </div>
           <strong>{counts.pendingWorkflows}</strong>
-        </div>
+        </button>
       </div>
 
       <div className="admin-project-list">
         <div className="panel panel-wide">
-          <div className="panel-header space-between">
-            <div><h3>Project List</h3><p className="form-note">{filteredProjects.length} of {projects.length} projects</p></div>
+            <div className="panel-header space-between">
+            <div><h3>Project List</h3><p className="form-note">{filteredProjects.length} of {projects.length} projects{dashboardFilter !== "all" ? ` · ${dashboardFilter} filter` : ""}</p></div>
             <input className="project-filter-input" aria-label="Filter projects" placeholder="Filter projects" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} />
           </div>
           <ProjectTable projects={filteredProjects} onSelect={handleProjectSelect} selectedProjectId={selectedProjectId} />

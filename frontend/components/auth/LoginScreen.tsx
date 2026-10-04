@@ -10,9 +10,8 @@ export function LoginScreen() {
   const [mode, setMode] = useState<"admin" | "client" | "team">("admin");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientPassword, setClientPassword] = useState("");
   const [teamUsername, setTeamUsername] = useState("");
   const [teamPassword, setTeamPassword] = useState("");
   const [error, setError] = useState("");
@@ -42,34 +41,37 @@ export function LoginScreen() {
         email: data.user?.email ?? adminEmail.trim(),
         phone: data.user?.phone ?? "",
         role: "admin",
-      });
+      }, data.token);
     } catch {
       setError("Unable to reach the backend. Please try again.");
     }
   };
 
-  const handleClientLogin = () => {
-    if (!clientName.trim() || !clientEmail.trim() || !clientPhone.trim()) {
-      setError("Please enter your name, email, and phone to continue.");
+  const handleClientLogin = async () => {
+    if (!clientPhone.trim() || !clientPassword.trim()) {
+      setError("Enter your registered phone number and password.");
       return;
     }
 
-    loginClient({
-      name: clientName.trim(),
-      email: clientEmail.trim(),
-      phone: clientPhone.trim(),
-    });
+    try {
+      await loginClient(clientPhone, clientPassword);
+      setError("");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Unable to sign in with those credentials.");
+    }
   };
 
-  const handleTeamLogin = () => {
+  const handleTeamLogin = async () => {
     if (!teamUsername.trim() || !teamPassword.trim()) {
       setError("Please enter your team username and password.");
       return;
     }
 
-    if (!loginTeam(teamUsername, teamPassword)) {
+    try {
+      await loginTeam(teamUsername, teamPassword);
+      setError("");
+    } catch {
       setError("Your account is pending approval or the credentials are incorrect.");
-      return;
     }
   };
 
@@ -114,14 +116,11 @@ export function LoginScreen() {
             <div className="login-title">Client Login</div>
             <p className="login-subtitle">Use your request details to view only your submitted projects.</p>
             <div className="login-form">
-              <label htmlFor="client-name">Name</label>
-              <input id="client-name" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter your name" />
-
-              <label htmlFor="client-email">Email</label>
-              <input id="client-email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="Enter your email" />
-
               <label htmlFor="client-phone">Phone</label>
               <input id="client-phone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="Enter your phone number" />
+
+              <label htmlFor="client-password">Password</label>
+              <input id="client-password" type="password" value={clientPassword} onChange={(e) => setClientPassword(e.target.value)} placeholder="Enter your password" />
 
               <button type="button" className="primary-button full-width" onClick={handleClientLogin}>
                 Open My Portal
