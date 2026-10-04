@@ -10,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import LinearProgress from "@mui/material/LinearProgress";
 
 import { EDITING_ROLES, type ClientContactDetails, type EditingChatMessage, type EditingMilestone, type EditingRole, type EditorAccount, type EditorApplication, type EventTeamMember, type EventTracker, type EventTrackerTask, type Project, type TeamInterest, type TeamMember, type TeamMemberRole, type TeamRegistration, type ViewMode } from "@/types/project";
 import { onApiActivity, trackedFetch } from "@/utils/apiActivity";
@@ -32,6 +31,7 @@ interface ProjectContextValue {
   setView: (mode: ViewMode) => void;
   isLoggedIn: boolean;
   isReady: boolean;
+  isLoading: boolean;
   activeRole: ViewMode | "guest";
   currentUser: SessionUser | null;
   loginAdmin: (user: SessionUser, token: string) => void;
@@ -866,6 +866,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setView,
       isLoggedIn,
       isReady,
+      isLoading: activeApiRequests > 0,
       activeRole,
       currentUser,
       loginAdmin,
@@ -924,13 +925,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateEditingMilestone,
       deliverEditedFiles,
     }),
-    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, signContract, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, updateTeamCredentials, uploadTeamRegistrationImages, verifyAdvancePayment, view],
+    [acceptClientRequest, acceptNegotiation, acceptQuote, activeApiRequests, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, signContract, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, updateTeamCredentials, uploadTeamRegistrationImages, verifyAdvancePayment, view],
   );
 
-  return <ProjectContext.Provider value={value}>
-    {activeApiRequests > 0 ? <LinearProgress className="global-api-progress" aria-label="Loading" /> : null}
-    {children}
-  </ProjectContext.Provider>;
+  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
 }
 
 export function useProjectContext() {

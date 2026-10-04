@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Box, Button, Collapse, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Collapse, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Typography } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import GroupsIcon from "@mui/icons-material/Groups";
 import EditNoteIcon from "@mui/icons-material/EditNote";
@@ -63,7 +63,7 @@ const portalCopy: Record<PortalRole, { label: string; title: string; links: Port
 };
 
 export function PortalShell({ role, children }: { role: PortalRole; children: ReactNode }) {
-  const { currentUser, logout } = useProjectContext();
+  const { currentUser, isLoading, logout } = useProjectContext();
   const copy = portalCopy[role];
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -119,7 +119,10 @@ export function PortalShell({ role, children }: { role: PortalRole; children: Re
         <Box className="portal-mobile-drawer-content" role="presentation">{renderNavigation(true)}</Box>
       </Drawer>
 
-      <Box component="main" className="portal-main">{children}</Box>
+      <Box component="main" className="portal-main" aria-busy={isLoading}>
+        {children}
+        {isLoading ? <Box className="portal-content-loader" role="status" aria-label="Loading content"><CircularProgress size={42} /><Typography variant="body2">Loading…</Typography></Box> : null}
+      </Box>
 
       {role === "admin" || role === "team" || role === "client" ? null : <Box component="aside" className="portal-aside">
         <div className="portal-aside-kicker">Post-production</div>
