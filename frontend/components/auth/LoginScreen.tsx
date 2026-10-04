@@ -10,8 +10,8 @@ export function LoginScreen() {
   const [mode, setMode] = useState<"admin" | "client" | "team">("admin");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [clientPassword, setClientPassword] = useState("");
   const [teamUsername, setTeamUsername] = useState("");
   const [teamPassword, setTeamPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,13 +48,13 @@ export function LoginScreen() {
   };
 
   const handleClientLogin = async () => {
-    if (!clientPhone.trim() || !clientPassword.trim()) {
-      setError("Enter your registered phone number and password.");
+    if (!clientEmail.trim() || !clientPhone.trim()) {
+      setError("Enter your registered email and phone number.");
       return;
     }
 
     try {
-      await loginClient(clientPhone, clientPassword);
+      await loginClient(clientEmail, clientPhone);
       setError("");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Unable to sign in with those credentials.");
@@ -114,13 +114,13 @@ export function LoginScreen() {
         {mode === "client" ? (
           <>
             <div className="login-title">Client Login</div>
-            <p className="login-subtitle">Use your request details to view only your submitted projects.</p>
+            <p className="login-subtitle">Use the email and phone number registered to your account.</p>
             <div className="login-form">
-              <label htmlFor="client-phone">Phone</label>
-              <input id="client-phone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="Enter your phone number" />
+              <label htmlFor="client-email">Email</label>
+              <input id="client-email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="Enter your registered email" />
 
-              <label htmlFor="client-password">Password</label>
-              <input id="client-password" type="password" value={clientPassword} onChange={(e) => setClientPassword(e.target.value)} placeholder="Enter your password" />
+              <label htmlFor="client-phone">Phone</label>
+              <input id="client-phone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="Enter your registered phone number" />
 
               <button type="button" className="primary-button full-width" onClick={handleClientLogin}>
                 Open My Portal

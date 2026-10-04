@@ -234,9 +234,14 @@ function requireAuth(req, res, next) {
 function projectAccessFilter(user) {
   if (user.role === 'admin') return {};
   if (user.role === 'client') {
-    const matches = [{ 'client.email': user.sub }];
-    if (user.phone) matches.push({ 'client.phone': user.phone });
-    return { $or: matches };
+    return {
+      $expr: {
+        $eq: [
+          { $toLower: { $trim: { input: { $ifNull: ['$client.email', ''] } } } },
+          user.sub,
+        ],
+      },
+    };
   }
   if (user.role === 'team') return { 'eventTeam.memberEmail': user.sub };
   if (user.role === 'editor') return { 'editingWorkflow.assignedEditorEmail': user.sub };
@@ -287,10 +292,7 @@ function normalizePhone(phone) {
 const seedDefaultUsers = async () => {
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   const defaults = [
-    { name: 'Admin Team', email: 'admin@ani.photography.com', password: adminPassword || 'admin123', role: 'admin', phone: '+91 90000 00000' },
-    { name: 'Client Team', email: 'client@ani.photography.com', password: 'client123', role: 'client', phone: '+91 90000 11111' },
-    { name: 'Team Member', email: 'team@ani.photography.com', password: 'team123', role: 'team', phone: '+91 90000 22222' },
-    { name: 'Editor Team', email: 'editor@ani.photography.com', password: 'editor123', role: 'editor', phone: '+91 90000 33333' },
+    { name: 'Admin Team', email: 'admin@ani.photography.com', password: adminPassword || 'admin123', role: 'admin', phone: '+91 8906349763' },
   ];
 
   for (const user of defaults) {
@@ -428,11 +430,11 @@ app.post('/api/auth/admin/login', async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [phone, password]
+ *             required: [email, phone]
  *             properties:
- *               phone:
+ *               email:
  *                 type: string
- *               password:
+ *               phone:
  *                 type: string
  *     responses:
  *       200:
@@ -441,22 +443,39 @@ app.post('/api/auth/admin/login', async (req, res) => {
  *         description: Invalid client credentials
  */
 app.post('/api/auth/client/login', async (req, res) => {
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
   const phone = normalizePhone(req.body?.phone);
-  const password = String(req.body?.password ?? '').trim();
-  const clients = phone ? await User.find({ role: 'client' }).select('name email phone password') : [];
-  const matchingClients = clients.filter((client) => normalizePhone(client.phone) === phone);
-  const user = matchingClients.length === 1 ? matchingClients[0] : null;
-
-  if (user && await verifyPassword(password, user.password)) {
-    return sendAuthResponse(res, 'client', {
-      name: user.name,
-      email: user.email,
-      role: 'client',
-      phone: user.phone,
-    });
+  if (!email || !phone) {
+    return res.status(400).json({ ok: false, message: 'Enter both your registered email address and phone number.' });
   }
 
-  return res.status(401).json({ ok: false, message: 'Invalid client credentials' });
+  const [emailUser, clients] = await Promise.all([
+    User.findOne({ email, role: 'client' }).select('name email phone role'),
+    User.find({ role: 'client', phone: { $exists: true, $ne: '' } }).select('name email phone role'),
+  ]);
+  const phoneMatches = clients.filter((client) => normalizePhone(client.phone) === phone);
+  const user = emailUser && normalizePhone(emailUser.phone) === phone ? emailUser : null;
+
+  if (!user) {
+    if (emailUser) {
+      return res.status(401).json({ ok: false, message: 'This email is registered, but the phone number does not match.' });
+    }
+    if (phoneMatches.length) {
+      return res.status(401).json({ ok: false, message: 'This phone number is registered, but the email does not match.' });
+    }
+    return res.status(404).json({ ok: false, message: 'No client account matches those details. Use the email and phone number on your registration.' });
+  }
+
+  if (phoneMatches.length > 1) {
+    return res.status(409).json({ ok: false, message: 'This phone number is linked to multiple client accounts. Please contact the studio.' });
+  }
+
+  return sendAuthResponse(res, 'client', {
+    name: user.name,
+    email: user.email,
+    role: 'client',
+    phone: user.phone,
+  });
 });
 
 /**

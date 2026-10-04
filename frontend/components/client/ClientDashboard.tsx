@@ -37,9 +37,7 @@ export function ClientDashboard() {
 
   const clientProjects = useMemo(() => projects.filter((project) => {
     if (currentUser?.role !== "client") return false;
-    const emailMatches = project.client.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase();
-    const phoneMatches = project.client.phone.replace(/\D/g, "") === currentUser.phone.replace(/\D/g, "");
-    return emailMatches || (Boolean(currentUser.phone) && phoneMatches);
+    return project.client.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase();
   }), [currentUser, projects]);
 
   const selectedProject = useMemo(

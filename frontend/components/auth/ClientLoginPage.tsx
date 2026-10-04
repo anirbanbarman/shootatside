@@ -8,23 +8,23 @@ import { useProjectContext } from "@/components/providers/ProjectProvider";
 export function ClientLoginPage() {
   const router = useRouter();
   const { loginClient } = useProjectContext();
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!phone.trim() || !password.trim()) {
-      setError("Enter your registered phone number and password.");
+    if (!email.trim() || !phone.trim()) {
+      setError("Enter both your registered email address and phone number.");
       return;
     }
 
     setError("");
     try {
-      await loginClient(phone, password);
+      await loginClient(email, phone);
       router.replace("/client");
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Unable to sign in. Check your phone and password.");
+      setError(loginError instanceof Error ? loginError.message : "Unable to sign in. Check your registered email and phone number.");
     }
   };
 
@@ -38,7 +38,20 @@ export function ClientLoginPage() {
         </div>
 
         <form className="role-login-form" onSubmit={handleLogin}>
-          <p className="form-intro">Sign in with the phone number and password registered to your client account.</p>
+          <p className="form-intro">Sign in with the email address and phone number registered to your client account.</p>
+
+          <div className="form-group">
+            <label htmlFor="client-email">Email Address</label>
+            <input
+              id="client-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your registered email"
+            />
+          </div>
 
           <div className="form-group">
             <label htmlFor="client-phone">Phone Number</label>
@@ -52,19 +65,6 @@ export function ClientLoginPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Enter your registered phone number"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="client-password">Password</label>
-            <input
-              id="client-password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
             />
           </div>
 

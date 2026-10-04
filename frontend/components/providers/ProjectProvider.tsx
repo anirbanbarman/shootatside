@@ -35,7 +35,7 @@ interface ProjectContextValue {
   activeRole: ViewMode | "guest";
   currentUser: SessionUser | null;
   loginAdmin: (user: SessionUser, token: string) => void;
-  loginClient: (phone: string, password: string) => Promise<void>;
+  loginClient: (email: string, phone: string) => Promise<void>;
   loginTeam: (username: string, password: string) => Promise<boolean>;
   loginEditor: (username: string, password: string) => Promise<boolean>;
   editors: EditorAccount[];
@@ -233,12 +233,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setIsReady(true);
   }, [syncFromStorage]);
 
-  const loadFromApi = useCallback(async () => {
+  const loadFromApi = useCallback(async (role: UserRole | null = currentUser?.role ?? null) => {
     try {
       const [projectsResponse, appsResponse, registrationsResponse] = await Promise.all([
         fetchApi<Project[]>("/projects").catch(() => []),
-        fetchApi<EditorApplication[]>("/editor/applications").catch(() => []),
-        fetchApi<TeamRegistration[]>("/team/registrations").catch(() => []),
+        role === "admin" ? fetchApi<EditorApplication[]>("/editor/applications").catch(() => []) : Promise.resolve([]),
+        role === "admin" ? fetchApi<TeamRegistration[]>("/team/registrations").catch(() => []) : Promise.resolve([]),
       ]);
 
       setProjects(projectsResponse ?? []);
@@ -286,7 +286,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setTeamRegistrations([]);
       setSelectedProjectId("");
     }
-  }, []);
+  }, [currentUser?.role]);
 
   useEffect(() => {
     void loadFromApi();
@@ -319,19 +319,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...user, role: "admin" });
     setActiveRole("admin");
     setView("admin");
-    void loadFromApi();
+    void loadFromApi("admin");
   }, [loadFromApi]);
 
-  const loginClient = useCallback(async (phone: string, password: string) => {
+  const loginClient = useCallback(async (email: string, phone: string) => {
     const response = await fetchApi<{ ok: boolean; user: SessionUser; token: string }>("/auth/client/login", {
       method: "POST",
-      body: JSON.stringify({ phone: phone.trim(), password }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), phone: phone.trim() }),
     });
     writeSessionValue(STORAGE_KEYS.token, response.token);
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "client" });
     setActiveRole("client");
     setView("client");
-    await loadFromApi();
+    await loadFromApi("client");
   }, [loadFromApi]);
 
   const loginTeam = useCallback(async (username: string, password: string) => {
@@ -343,7 +343,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "team" });
     setActiveRole("team");
     setView("team");
-    await loadFromApi();
+    await loadFromApi("team");
     return true;
   }, [loadFromApi]);
 
@@ -356,7 +356,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...response.user, phone: response.user.phone ?? "", role: "editor" });
     setActiveRole("editor");
     setView("editor");
-    await loadFromApi();
+    await loadFromApi("editor");
     return true;
   }, [loadFromApi]);
 
