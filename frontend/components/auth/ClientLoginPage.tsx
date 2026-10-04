@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
@@ -13,7 +13,8 @@ export function ClientLoginPage() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!name.trim() || !email.trim() || !phone.trim()) {
       setError("Please enter your name, email, and phone to continue.");
       return;
@@ -36,7 +37,7 @@ export function ClientLoginPage() {
           <p>Access Your Photography Projects</p>
         </div>
 
-        <div className="role-login-form">
+        <form className="role-login-form" onSubmit={handleLogin}>
           <p className="form-intro">Enter your details to view your submitted requests and quotes.</p>
 
           <div className="form-group">
@@ -44,6 +45,8 @@ export function ClientLoginPage() {
             <input
               id="client-name"
               type="text"
+              autoComplete="name"
+              required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter your name"
@@ -55,6 +58,8 @@ export function ClientLoginPage() {
             <input
               id="client-email"
               type="email"
+              autoComplete="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
@@ -66,6 +71,10 @@ export function ClientLoginPage() {
             <input
               id="client-phone"
               type="tel"
+              autoComplete="tel"
+              minLength={7}
+              maxLength={20}
+              required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Enter your phone number"
@@ -74,11 +83,11 @@ export function ClientLoginPage() {
 
           {error ? <div className="error-box">{error}</div> : null}
 
-          <button type="button" className="primary-button full-width" onClick={handleLogin}>
+          <button type="submit" className="primary-button full-width">
             Open My Portal
           </button>
 
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { TeamRegistrationForm } from "@/components/auth/TeamRegistrationForm";
@@ -17,7 +17,8 @@ export function TeamLoginPage() {
   const [error, setError] = useState("");
   const [editorPortalSuggested, setEditorPortalSuggested] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!username.trim() || !password.trim()) {
       setError("Please enter your username and password.");
       return;
@@ -53,11 +54,14 @@ export function TeamLoginPage() {
           </> : <>
           <p className="form-intro">Use the username and password given to you after admin approval.</p>
 
+          <form className="team-login-form" onSubmit={(event) => { void handleLogin(event); }}>
           <div className="form-group">
             <label htmlFor="team-username">Username</label>
             <input
               id="team-username"
               type="text"
+              autoComplete="username"
+              required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
@@ -69,6 +73,8 @@ export function TeamLoginPage() {
             <input
               id="team-password"
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
@@ -77,7 +83,7 @@ export function TeamLoginPage() {
 
           {error ? <div className="error-box">{error}{editorPortalSuggested ? <> <Link href="/editor">Open Editor Workspace</Link></> : null}</div> : null}
 
-          <button type="button" className="primary-button full-width" onClick={handleLogin}>
+          <button type="submit" className="primary-button full-width">
             Login to Team
           </button>
 
@@ -86,6 +92,7 @@ export function TeamLoginPage() {
           </Link>
 
           <button type="button" className="secondary-button full-width" onClick={() => setShowRegistration(true)}>Register as Team Member</button>
+          </form>
           </>}
         </div>
       </div>

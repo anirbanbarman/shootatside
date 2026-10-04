@@ -57,12 +57,14 @@ export function AdminLoginPage() {
           <p>Photography Management Dashboard</p>
         </div>
 
-        <div className="role-login-form">
+        <form className="role-login-form" onSubmit={(event) => { event.preventDefault(); void handleLogin(); }}>
           <div className="form-group">
             <label htmlFor="admin-email">Email Address</label>
             <input
               id="admin-email"
               type="email"
+              autoComplete="username"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
@@ -74,6 +76,8 @@ export function AdminLoginPage() {
             <input
               id="admin-password"
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
@@ -82,10 +86,10 @@ export function AdminLoginPage() {
 
           {error ? <div className="error-box">{error}</div> : null}
 
-          <button type="button" className="primary-button full-width" onClick={handleLogin}>
+          <button type="submit" className="primary-button full-width">
             Login to Admin
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

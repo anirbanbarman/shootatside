@@ -195,8 +195,9 @@ async function verifyPassword(password, storedHash) {
 }
 
 const seedDefaultUsers = async () => {
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   const defaults = [
-    { name: 'Admin Team', email: 'admin@ani.photography.com', password: 'admin123', role: 'admin', phone: '+91 90000 00000' },
+    { name: 'Admin Team', email: 'admin@ani.photography.com', password: adminPassword || 'admin123', role: 'admin', phone: '+91 90000 00000' },
     { name: 'Client Team', email: 'client@ani.photography.com', password: 'client123', role: 'client', phone: '+91 90000 11111' },
     { name: 'Team Member', email: 'team@ani.photography.com', password: 'team123', role: 'team', phone: '+91 90000 22222' },
     { name: 'Editor Team', email: 'editor@ani.photography.com', password: 'editor123', role: 'editor', phone: '+91 90000 33333' },
@@ -207,6 +208,9 @@ const seedDefaultUsers = async () => {
     const existingUser = await User.findOne({ email });
     if (!existingUser) {
       await User.create({ ...user, email, password: await hashPassword(user.password) });
+    } else if (user.role === 'admin' && adminPassword && !(await verifyPassword(adminPassword, existingUser.password))) {
+      existingUser.password = await hashPassword(adminPassword);
+      await existingUser.save();
     } else if (!existingUser.password.startsWith('scrypt$')) {
       existingUser.password = await hashPassword(existingUser.password);
       await existingUser.save();

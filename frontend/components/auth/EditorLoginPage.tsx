@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Alert, Avatar, Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, TextField, Typography } from "@mui/material";
@@ -110,13 +109,15 @@ export function EditorLoginPage() {
           {error ? <Alert severity="error">{error}</Alert> : null}
           <Button type="submit" variant="contained" startIcon={<PersonAddAltOutlinedIcon />}>Submit editor application</Button>
           <Button type="button" variant="text" onClick={() => { setShowApplication(false); setError(""); }}>Back to sign in</Button>
-        </Box> : <Stack spacing={2.5} className="editor-signin-form">
-          <TextField label="Username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
-          <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+        </Box> : <Box component="form" onSubmit={(event) => { event.preventDefault(); void handleLogin(); }} className="editor-signin-form">
+          <Stack spacing={2.5}>
+          <TextField required label="Username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
+          <TextField required label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <Button variant="contained" startIcon={<LoginOutlinedIcon />} onClick={handleLogin}>Sign in to Editor Dashboard</Button>
-          <Button variant="outlined" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => { setShowApplication(true); setError(""); }}>Apply as an Editor</Button>
-        </Stack>}
+          <Button type="submit" variant="contained" startIcon={<LoginOutlinedIcon />}>Sign in to Editor Dashboard</Button>
+          <Button type="button" variant="outlined" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => { setShowApplication(true); setError(""); }}>Apply as an Editor</Button>
+          </Stack>
+        </Box>}
       </CardContent>
     </Card>
   </Box>;

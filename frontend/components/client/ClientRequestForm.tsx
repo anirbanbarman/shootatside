@@ -37,8 +37,8 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.venue.trim() || !form.eventDate || !form.eventType.trim()) {
-      setError("Please complete the required client details, including the event date.");
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.venue.trim() || !form.eventDate || !form.eventType.trim()) {
+      setError("Please complete the required client details, including a valid email and event date.");
       setSuccess("");
       return;
     }
@@ -104,7 +104,12 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
 
         <div className="form-group">
           <label htmlFor="clientPhone">Phone Number</label>
-          <input id="clientPhone" type="tel" value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="Enter your phone number" required />
+          <input id="clientPhone" type="tel" value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="Enter your phone number" minLength={7} maxLength={20} required />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="clientEmail">Email Address</label>
+          <input id="clientEmail" type="email" value={form.email} onChange={(event) => handleChange("email", event.target.value)} placeholder="Enter your email address" autoComplete="email" required />
         </div>
 
         <div className="form-group">

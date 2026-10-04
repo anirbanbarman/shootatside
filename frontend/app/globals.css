@@ -41,6 +41,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+img,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+.card,
+.panel,
+.role-login-container,
+.editor-auth-card {
+  min-width: 0;
+}
+
 .global-api-progress.MuiLinearProgress-root {
   position: fixed;
   inset: 0 0 auto;
@@ -2948,6 +2962,19 @@ button {
   min-width: 900px;
 }
 
+.material-project-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.material-project-table-scroll:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .material-project-table-grid .MuiTableCell-head {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(31, 41, 55, 0.1);
@@ -3282,6 +3309,16 @@ button.full-width {
     min-width: 820px;
   }
 
+  .material-project-table.MuiPaper-root {
+    max-width: 100%;
+  }
+
+  .material-project-table .MuiTablePagination-toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px;
+  }
+
   .mui-dialog-paper.MuiPaper-root {
     margin: 10px;
     border-radius: 16px;
@@ -3614,6 +3651,50 @@ button.full-width {
   margin: 0;
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+@media (max-width: 720px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .hierarchy-field-labels {
+    display: none;
+  }
+
+  .material-table-toolbar {
+    min-width: 0;
+  }
+
+  .material-project-table .MuiTablePagination-selectLabel,
+  .material-project-table .MuiTablePagination-displayedRows {
+    margin: 0;
+  }
+
+  .form-group,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid,
+  .team-event-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .material-project-table .MuiTablePagination-toolbar {
+    justify-content: space-between;
+    column-gap: 4px;
+  }
+
+  .role-login-container {
+    width: min(100% - 24px, 520px);
+  }
 }
 
 .editing-chat-heading,

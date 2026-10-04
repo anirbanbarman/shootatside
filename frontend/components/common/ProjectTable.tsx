@@ -56,6 +56,7 @@ export function ProjectTable({ projects, onSelect, selectedProjectId }: ProjectT
         <Box><Typography variant="subtitle1" component="h3" sx={{ fontWeight: 750 }}>Projects</Typography><Typography variant="body2" color="text.secondary">{visibleProjects.length} {visibleProjects.length === 1 ? "project" : "projects"}</Typography></Box>
         <TextField size="small" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search projects" aria-label="Search projects" className="material-table-search" slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
       </Box>
+      <Box className="material-project-table-scroll" role="region" aria-label="Scrollable projects table" tabIndex={0}>
       <Table size="medium" aria-label="Projects" className="material-project-table-grid">
         <TableHead><TableRow><TableCell>{sortLabel("Project ID", "id")}</TableCell><TableCell>{sortLabel("Client", "client")}</TableCell><TableCell>{sortLabel("Event", "eventType")}</TableCell><TableCell>{sortLabel("Event date", "eventDate")}</TableCell><TableCell>Quote amount</TableCell><TableCell>Status</TableCell><TableCell align="right">Action</TableCell></TableRow></TableHead>
         <TableBody>{visibleProjects.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((project) => <TableRow key={project.id} selected={project.id === selectedProjectId} hover className="material-project-row">
@@ -65,6 +66,7 @@ export function ProjectTable({ projects, onSelect, selectedProjectId }: ProjectT
         {visibleProjects.length === 0 ? <TableRow key="empty-projects"><TableCell colSpan={7}><Box className="material-table-empty"><InboxOutlinedIcon /><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>No projects found</Typography><Typography variant="body2" color="text.secondary">Try another search or clear the search field.</Typography></Box></TableCell></TableRow> : null}
         </TableBody>
       </Table>
+      </Box>
       <TablePagination component="div" count={visibleProjects.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[5, 10, 25]} labelRowsPerPage="Rows" />
     </TableContainer>
   );
