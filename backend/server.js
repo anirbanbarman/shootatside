@@ -243,6 +243,43 @@ function projectAccessFilter(user) {
   return null;
 }
 
+async function authorizeProjectAccess(req, res, next) {
+  const user = req.auth;
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ ok: false, message: 'Project not found' });
+  if (user.role === 'admin') return next();
+
+  try {
+    if (user.role === 'team' && req.method === 'POST' && req.path === '/team-interest') {
+      const exists = await Project.exists({ _id: req.params.id });
+      return exists
+        ? next()
+        : res.status(404).json({ ok: false, message: 'Project not found' });
+    }
+
+    const filter = projectAccessFilter(user);
+    if (!filter) return res.status(403).json({ ok: false, message: 'This account cannot access projects.' });
+    const project = await Project.findOne({ _id: req.params.id, ...filter }).select('_id');
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+
+    if (user.role === 'client') {
+      const allowedClientActions = [
+        '/contract-details', '/accept-quote', '/reject-quote',
+        '/accept-negotiation', '/reject-negotiation', '/pay-advance',
+      ];
+      if (req.method !== 'GET' && !allowedClientActions.includes(req.path)) {
+        return res.status(403).json({ ok: false, message: 'Clients cannot perform this project action.' });
+      }
+    } else if (req.method !== 'GET') {
+      return res.status(403).json({ ok: false, message: 'Only admins can perform this project action.' });
+    }
+
+    return next();
+  } catch (error) {
+    console.error('Project access check failed:', error.message);
+    return res.status(500).json({ ok: false, message: 'Unable to verify project access.' });
+  }
+}
+
 function normalizePhone(phone) {
   return String(phone ?? '').replace(/\D/g, '');
 }
@@ -315,6 +352,8 @@ app.use(async (req, res, next) => {
     });
   }
 });
+
+app.use('/api/projects/:id', requireAuth, authorizeProjectAccess);
 
 /**
  * @openapi
