@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dayjs from "dayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 
 const defaultServices = ["Still Photography", "Cinematography", "Drone Shoot"];
 
 export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
-  const { createProjectRequest } = useProjectContext();
+  const { createProjectRequest, currentUser } = useProjectContext();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -23,6 +25,10 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const clientName = form.name || (currentUser?.role === "client" ? currentUser.name : "");
+  const clientEmail = form.email || (currentUser?.role === "client" ? currentUser.email : "");
+  const clientPhone = form.phone || (currentUser?.role === "client" ? currentUser.phone : "");
+
   const handleChange = (field: string, value: string | number | string[]) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
@@ -37,7 +43,7 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.venue.trim() || !form.eventDate || !form.eventType.trim()) {
+    if (!clientName.trim() || !clientEmail.trim() || !clientPhone.trim() || !form.venue.trim() || !form.eventDate || !form.eventType.trim()) {
       setError("Please complete the required client details, including a valid email and event date.");
       setSuccess("");
       return;
@@ -52,7 +58,6 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
     const requirementText = [
       `Event date: ${form.eventDate}`,
       `Event side: ${form.eventSide}`,
-      `Budget: ${form.budget}`,
       `Requirements: ${form.services.join(", ")}`,
       form.requirements.trim() ? `Comments: ${form.requirements.trim()}` : "",
     ]
@@ -60,12 +65,13 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       .join(" | ");
 
     createProjectRequest({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
+      name: clientName.trim(),
+      email: clientEmail.trim(),
+      phone: clientPhone.trim(),
       eventType: form.eventType.trim(),
       eventDate: form.eventDate,
       venue: form.venue.trim(),
+      budget: form.budget,
       requirements: requirementText,
     });
 
@@ -99,17 +105,17 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
       <div className="form-grid">
         <div className="form-group">
           <label htmlFor="clientName">Name</label>
-          <input id="clientName" type="text" value={form.name} onChange={(event) => handleChange("name", event.target.value)} placeholder="Enter your name" required />
+          <input id="clientName" type="text" value={clientName} onChange={(event) => handleChange("name", event.target.value)} placeholder="Enter your name" required />
         </div>
 
         <div className="form-group">
           <label htmlFor="clientPhone">Phone Number</label>
-          <input id="clientPhone" type="tel" value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="Enter your phone number" minLength={7} maxLength={20} required />
+          <input id="clientPhone" type="tel" value={clientPhone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="Enter your phone number" minLength={7} maxLength={20} required />
         </div>
 
         <div className="form-group">
           <label htmlFor="clientEmail">Email Address</label>
-          <input id="clientEmail" type="email" value={form.email} onChange={(event) => handleChange("email", event.target.value)} placeholder="Enter your email address" autoComplete="email" required />
+          <input id="clientEmail" type="email" value={clientEmail} onChange={(event) => handleChange("email", event.target.value)} placeholder="Enter your email address" autoComplete="email" required />
         </div>
 
         <div className="form-group">
@@ -135,7 +141,7 @@ export function ClientRequestForm({ onSuccess }: { onSuccess?: () => void }) {
 
         <div className="form-group">
           <label htmlFor="eventDate">Event Date</label>
-          <input id="eventDate" type="date" value={form.eventDate} onChange={(event) => handleChange("eventDate", event.target.value)} required />
+          <DatePicker value={form.eventDate ? dayjs(form.eventDate) : null} minDate={dayjs().startOf("day")} onChange={(value) => handleChange("eventDate", value?.isValid() ? value.format("YYYY-MM-DD") : "")} slotProps={{ textField: { id: "eventDate", required: true, fullWidth: true, size: "small" } }} />
         </div>
 
         <div className="form-group">

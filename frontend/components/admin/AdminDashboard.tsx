@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent } from "react";
+import dayjs from "dayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { Modal } from "@/components/common/Modal";
@@ -15,15 +17,16 @@ import { ProjectTimeline } from "@/components/common/ProjectTimeline";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { EDITING_ROLES, TEAM_MEMBER_ROLES, type TeamMemberRole, type TeamRegistration, type TeamUserType } from "@/types/project";
-import { formatCurrency, formatDate, getProjectStatus } from "@/utils/status";
+import { formatCurrency, formatDate, getLocalDateInputValue, getProjectStatus } from "@/utils/status";
 import { getTrackerMemberJoinTime } from "@/utils/notifications";
+import { downloadProjectContract } from "@/utils/downloadContract";
 
 function LiveTrackerPanel() {
   const { projects, addEventTrackerTask, toggleEventTrackerTask, sendEventTrackerMessage } = useProjectContext();
   const [taskText, setTaskText] = useState<Record<string, string>>({});
   const [chatText, setChatText] = useState<Record<string, string>>({});
   const [showAllTrackers, setShowAllTrackers] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateInputValue();
     const visibleTrackers = projects.filter((project) => project.eventTeam?.length && (showAllTrackers || project.eventDate === today));
 
   return <div className="panel live-tracker-panel"><div className="panel-header live-tracker-header"><div><div className="tracker-title"><span className="tracker-title-icon" aria-hidden="true">◷</span><h3>Live Event Tracker</h3><span className="tracker-live-dot">LIVE</span></div><p className="form-note">Showing {showAllTrackers ? "all event trackers" : "today's event trackers"}.</p></div><button type="button" className="secondary-button tracker-filter-button" onClick={() => setShowAllTrackers((current) => !current)}><span aria-hidden="true">▣</span>{showAllTrackers ? "Show Today Only" : "Show All Trackers"}</button></div>{visibleTrackers.length === 0 ? <div className="empty-state tracker-empty"><span className="tracker-empty-icon" aria-hidden="true">◌</span><strong>{showAllTrackers ? "No event teams have been created yet." : "No team tracker is scheduled for today."}</strong><p>{showAllTrackers ? "Create an event team from Team Hierarchy to start tracking it." : "Only events dated today appear here. Use Show All Trackers to review other event dates."}</p></div> : <div className="live-tracker-list">{visibleTrackers.map((project) => { const isToday = project.eventDate === today; const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] }; const leader = project.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader"); const isCompleted = Boolean(tracker.eventCompletedAt); return <article className={`live-tracker-card ${isToday ? "tracker-card-today" : "tracker-card-readonly"}`} key={project.id}><div className="panel-header"><div><p className="eyebrow">{project.id}</p><h3>{project.eventType} · {formatDate(project.eventDate)}</h3><p>{project.client.name} · {project.venue}</p></div><span className={`tracker-status ${isCompleted ? "tracker-status-complete" : isToday ? "tracker-status-live" : "tracker-status-muted"}`}><span aria-hidden="true">{isCompleted ? "✓" : isToday ? "●" : "○"}</span>{isCompleted ? `Event Completed · ${new Date(tracker.eventCompletedAt ?? "").toLocaleString()}` : isToday ? (tracker.leaderArrivedAt ? `Leader reached ${new Date(tracker.leaderArrivedAt).toLocaleTimeString()}` : "Leader not reached") : "Read only"}</span>
@@ -43,7 +46,7 @@ function TeamHierarchyBuilder() {
   const [drafts, setDrafts] = useState<Record<string, { kind: "interested" | "custom"; memberEmail: string; name: string; phone: string; userType: TeamUserType; role: TeamMemberRole }[]>>({});
 
   return <div className="panel">
-    <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Add interested members or create custom team members for each event.</p></div><label><span>Filter by event date</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label></div>
+    <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Add interested members or create custom team members for each event.</p></div><DatePicker label="Filter by event date" value={date ? dayjs(date) : null} onChange={(value) => setDate(value?.isValid() ? value.format("YYYY-MM-DD") : "")} slotProps={{ textField: { size: "small" } }} /></div>
     <div className="event-hierarchy-list">{projects.filter((project) => !date || project.eventDate === date).map((project) => {
       const interested = (project.teamInterest ?? []).map((interest) => ({ interest, registration: teamRegistrations.find((registration) => registration.email === interest.memberEmail) })).filter((item) => item.registration);
       const rows = drafts[project.id] ?? project.eventTeam?.map((member) => ({ kind: "custom" as const, memberEmail: member.memberEmail, name: member.member, phone: member.memberPhone ?? "", userType: member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member") as TeamUserType, role: member.role })) ?? [];
@@ -244,7 +247,7 @@ export function TeamManagementPanel() {
       {activeSubsection === "interests" ? <div className="panel">
         <div className="panel-header">
           <h3>Team Interest Requests</h3>
-          <input aria-label="Filter interest requests by event date" type="date" value={interestDate} onChange={(event) => setInterestDate(event.target.value)} />
+          <DatePicker label="Filter by event date" value={interestDate ? dayjs(interestDate) : null} onChange={(value) => setInterestDate(value?.isValid() ? value.format("YYYY-MM-DD") : "")} slotProps={{ textField: { size: "small" } }} />
         </div>
         {requests.length === 0 ? (
           <div className="empty-state">No team members have requested event access.</div>
@@ -259,7 +262,7 @@ export function TeamManagementPanel() {
                     <p>{project.eventType} · {formatDate(project.eventDate)} · {project.venue}</p>
                   </div>
                   <div className="team-request-actions">
-                    <span className="pill">{interest.status}</span>
+                    <Chip size="small" label={interest.status} color={interest.status === "ACCEPTED" ? "success" : interest.status === "PENDING" ? "warning" : "default"} variant="outlined" />
                     {interest.status === "PENDING" ? (
                       <>
                         <button type="button" className="success-button" onClick={() => void approveTeamInterest(project.id, interest.memberEmail).catch((error) => window.alert(error instanceof Error ? error.message : "Unable to accept interest."))}>Accept Request</button>
@@ -278,7 +281,7 @@ export function TeamManagementPanel() {
       {activeSubsection === "live-tracker" ? <LiveTrackerPanel /> : null}
 
       {activeSubsection === "hierarchy" ? <div className="panel">
-        <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Build a separate team for each event from members who showed interest.</p></div><input aria-label="Filter hierarchy events by date" type="date" value={hierarchyDate} onChange={(event) => setHierarchyDate(event.target.value)} /></div>
+        <div className="panel-header"><div><h3>Team Hierarchy</h3><p className="form-note">Build a separate team for each event from members who showed interest.</p></div><DatePicker label="Filter by event date" value={hierarchyDate ? dayjs(hierarchyDate) : null} onChange={(value) => setHierarchyDate(value?.isValid() ? value.format("YYYY-MM-DD") : "")} slotProps={{ textField: { size: "small" } }} /></div>
         <div className="event-hierarchy-list">
           {projects.filter((project) => !hierarchyDate || project.eventDate === hierarchyDate).map((project) => {
             const interestedMembers = (project.teamInterest ?? []).map((interest) => ({ interest, registration: teamRegistrations.find((registration) => registration.email === interest.memberEmail) })).filter((item) => item.registration);
@@ -316,7 +319,7 @@ export function TeamManagementPanel() {
 
 export function AdminDashboard() {
   const searchParams = useSearchParams();
-  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest, verifyAdvancePayment, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
+  const { projects, selectedProjectId, setSelectedProjectId, sendQuote, sendNegotiation, acceptClientRequest, verifyAdvancePayment, signContract, editorApplications, approveEditorApplication, rejectEditorApplication } = useProjectContext();
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteComment, setQuoteComment] = useState("");
   const [quoteAdvancePercent, setQuoteAdvancePercent] = useState("30");
@@ -334,6 +337,8 @@ export function AdminDashboard() {
   const [negotiationSuccess, setNegotiationSuccess] = useState("");
   const [isTimelineOpen, setTimelineOpen] = useState(false);
   const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
+  const [adminSignature, setAdminSignature] = useState("");
+  const [isSigningContract, setIsSigningContract] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
   const [dashboardFilter, setDashboardFilter] = useState<"all" | "upcoming" | "active" | "pending">("all");
   const isTeamManagement = Boolean(searchParams.get("section"));
@@ -399,6 +404,19 @@ export function AdminDashboard() {
       setPaymentVerificationError(verificationError instanceof Error ? verificationError.message : "Unable to verify payment. Please try again.");
     } finally {
       setIsVerifyingPayment(false);
+    }
+  };
+
+  const handleAdminContractSign = async () => {
+    if (adminSignature.trim().length < 2) return;
+    setIsSigningContract(true);
+    try {
+      await signContract(selectedProject.id, adminSignature.trim());
+      setAdminSignature("");
+    } catch (signError) {
+      setRequestAcceptError(signError instanceof Error ? signError.message : "Unable to sign the contract.");
+    } finally {
+      setIsSigningContract(false);
     }
   };
 
@@ -540,6 +558,7 @@ export function AdminDashboard() {
                 <div><label>Event Type</label><p>{selectedProject.eventType}</p></div>
                 <div><label>Event Date</label><p>{formatDate(selectedProject.eventDate)}</p></div>
                 <div><label>Venue</label><p>{selectedProject.venue}</p></div>
+                {selectedProject.budget ? <div><label>Client Budget</label><p>{selectedProject.budget}</p></div> : null}
                 <div><label>Status</label><div className="status-inline"><StatusBadge project={selectedProject} /></div></div>
                 <div className="full-width"><label>Requirements</label><p>{selectedProject.requirements}</p></div>
                 {selectedProject.teamBrief ? <><div><label>Team Call Time</label><p>{new Date(selectedProject.teamBrief.callTime).toLocaleString()}</p></div><div><label>Team Call Venue</label><p>{selectedProject.teamBrief.callVenue}</p></div></> : null}
@@ -625,6 +644,18 @@ export function AdminDashboard() {
                 </div>
               </div>
             ) : null}
+
+            {(selectedProject.clientResponse?.type === "ACCEPTED" || selectedProject.negotiationResponse?.type === "ACCEPTED") ? <div className="section-block">
+              <p className="eyebrow">Service Contract Signatures</p>
+              <div className="quote-box"><div className="quote-row"><strong>Event and date</strong><span>{selectedProject.eventType} · {formatDate(selectedProject.eventDate)}</span></div><div className="quote-row"><strong>Venue</strong><span>{selectedProject.venue}</span></div><div className="quote-row"><strong>Agreed quote</strong><span>{formatCurrency(selectedProject.negotiation?.amount ?? selectedProject.initialQuote?.amount ?? 0)}</span></div><div className="quote-row"><strong>Requirements</strong><span>{selectedProject.requirements}</span></div></div>
+              <Button variant="outlined" onClick={() => downloadProjectContract(selectedProject)}>Download contract for review</Button>
+              <div className="quote-box">
+                <div className="quote-row"><strong>Client</strong><span>{selectedProject.contract?.clientSignature ? `${selectedProject.contract.clientSignature} · ${formatDate(selectedProject.contract.clientSignedAt ?? "")}` : "Signature pending"}</span></div>
+                <div className="quote-row"><strong>Admin</strong><span>{selectedProject.contract?.adminSignature ? `${selectedProject.contract.adminSignature} · ${formatDate(selectedProject.contract.adminSignedAt ?? "")}` : "Signature pending"}</span></div>
+              </div>
+              {!selectedProject.contract?.adminSignedAt ? <div className="form-stack"><label htmlFor="admin-contract-signature">Admin signature (type full name)</label><input id="admin-contract-signature" value={adminSignature} onChange={(event) => setAdminSignature(event.target.value)} /><button type="button" className="primary-button" disabled={isSigningContract || adminSignature.trim().length < 2} onClick={handleAdminContractSign}>{isSigningContract ? "Signing…" : "Sign Contract as Admin"}</button></div> : null}
+              {!selectedProject.contract?.clientSignedAt ? <p className="form-note">Waiting for the client to sign. Payment remains locked until both signatures are complete.</p> : null}
+            </div> : null}
 
             {selectedProject.payment?.screenshotDataUrl ? (
               <div className="section-block">

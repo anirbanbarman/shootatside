@@ -16,9 +16,10 @@ interface ProjectTableProps {
   projects: Project[];
   onSelect: (projectId: string) => void;
   selectedProjectId?: string;
+  hideProjectId?: boolean;
 }
 
-export function ProjectTable({ projects, onSelect, selectedProjectId }: ProjectTableProps) {
+export function ProjectTable({ projects, onSelect, selectedProjectId, hideProjectId = true }: ProjectTableProps) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -58,12 +59,12 @@ export function ProjectTable({ projects, onSelect, selectedProjectId }: ProjectT
       </Box>
       <Box className="material-project-table-scroll" role="region" aria-label="Scrollable projects table" tabIndex={0}>
       <Table size="medium" aria-label="Projects" className="material-project-table-grid">
-        <TableHead><TableRow><TableCell>{sortLabel("Project ID", "id")}</TableCell><TableCell>{sortLabel("Client", "client")}</TableCell><TableCell>{sortLabel("Event", "eventType")}</TableCell><TableCell>{sortLabel("Event date", "eventDate")}</TableCell><TableCell>Quote amount</TableCell><TableCell>Status</TableCell><TableCell align="right">Action</TableCell></TableRow></TableHead>
+        <TableHead><TableRow>{hideProjectId ? null : <TableCell>{sortLabel("Project ID", "id")}</TableCell>}<TableCell>{sortLabel("Client", "client")}</TableCell><TableCell>{sortLabel("Event", "eventType")}</TableCell><TableCell>{sortLabel("Event date", "eventDate")}</TableCell><TableCell>Budget</TableCell><TableCell>Quote amount</TableCell><TableCell>Status</TableCell><TableCell align="right">Action</TableCell></TableRow></TableHead>
         <TableBody>{visibleProjects.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((project) => <TableRow key={project.id} selected={project.id === selectedProjectId} hover className="material-project-row">
-          <TableCell className="project-id-cell">{project.id}</TableCell><TableCell><Typography variant="body2" sx={{ fontWeight: 700 }}>{project.client.name}</Typography></TableCell><TableCell>{project.eventType}</TableCell><TableCell>{formatDate(project.eventDate)}</TableCell><TableCell>{project.initialQuote ? formatCurrency(project.negotiation?.amount ?? project.initialQuote.amount) : "—"}</TableCell><TableCell><StatusBadge project={project} /></TableCell>
+          {hideProjectId ? null : <TableCell className="project-id-cell">{project.id}</TableCell>}<TableCell><Typography variant="body2" sx={{ fontWeight: 700 }}>{project.client.name}</Typography></TableCell><TableCell>{project.eventType}</TableCell><TableCell>{formatDate(project.eventDate)}</TableCell><TableCell>{project.budget || "—"}</TableCell><TableCell>{project.initialQuote ? formatCurrency(project.negotiation?.amount ?? project.initialQuote.amount) : "—"}</TableCell><TableCell><StatusBadge project={project} /></TableCell>
           <TableCell align="right"><AppButton size="small" variant="contained" endIcon={<OpenInNewIcon />} onClick={() => onSelect(project.id)}>Details</AppButton></TableCell>
         </TableRow>)}
-        {visibleProjects.length === 0 ? <TableRow key="empty-projects"><TableCell colSpan={7}><Box className="material-table-empty"><InboxOutlinedIcon /><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>No projects found</Typography><Typography variant="body2" color="text.secondary">Try another search or clear the search field.</Typography></Box></TableCell></TableRow> : null}
+        {visibleProjects.length === 0 ? <TableRow key="empty-projects"><TableCell colSpan={hideProjectId ? 7 : 8}><Box className="material-table-empty"><InboxOutlinedIcon /><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>No projects found</Typography><Typography variant="body2" color="text.secondary">Try another search or clear the search field.</Typography></Box></TableCell></TableRow> : null}
         </TableBody>
       </Table>
       </Box>

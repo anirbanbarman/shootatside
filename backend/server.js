@@ -118,9 +118,11 @@ const projectSchema = new mongoose.Schema(
     eventType: String,
     eventDate: String,
     venue: String,
+    budget: String,
     requirements: String,
     requestAcceptedAt: Date,
     clientContactDetails: Object,
+    contract: Object,
     initialQuote: Object,
     clientResponse: Object,
     negotiation: Object,
@@ -243,7 +245,15 @@ function projectAccessFilter(user) {
       },
     };
   }
-  if (user.role === 'team') return { 'eventTeam.memberEmail': user.sub };
+  if (user.role === 'team') {
+    return {
+      'payment.status': 'PAID',
+      $or: [
+        { 'clientResponse.type': 'ACCEPTED' },
+        { 'negotiationResponse.type': 'ACCEPTED' },
+      ],
+    };
+  }
   if (user.role === 'editor') return { 'editingWorkflow.assignedEditorEmail': user.sub };
   return null;
 }
@@ -268,7 +278,7 @@ async function authorizeProjectAccess(req, res, next) {
 
     if (user.role === 'client') {
       const allowedClientActions = [
-        '/contract-details', '/accept-quote', '/reject-quote',
+        '/contract-details', '/contract-sign', '/accept-quote', '/reject-quote',
         '/accept-negotiation', '/reject-negotiation', '/pay-advance',
       ];
       if (req.method !== 'GET' && !allowedClientActions.includes(req.path)) {
@@ -287,6 +297,12 @@ async function authorizeProjectAccess(req, res, next) {
 
 function normalizePhone(phone) {
   return String(phone ?? '').replace(/\D/g, '');
+}
+
+function isValidEventDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 const seedDefaultUsers = async () => {
@@ -1044,13 +1060,13 @@ app.get('/api/projects', requireAuth, async (req, res) => {
  */
 app.post('/api/projects', async (req, res) => {
   try {
-    const { client, eventType, eventDate, venue, requirements } = req.body || {};
+    const { client, eventType, eventDate, venue, budget, requirements } = req.body || {};
 
     const email = String(client?.email ?? '').trim().toLowerCase();
     const phone = String(client?.phone ?? '').trim();
     const normalizedPhone = normalizePhone(phone);
-    if (!client || !eventType || !String(client.name ?? '').trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || normalizedPhone.length < 7 || normalizedPhone.length > 15) {
-      return res.status(400).json({ ok: false, message: 'Valid client name, email, phone, and event type are required.' });
+    if (!client || !eventType || !String(client.name ?? '').trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || normalizedPhone.length < 7 || normalizedPhone.length > 15 || !isValidEventDate(eventDate)) {
+      return res.status(400).json({ ok: false, message: 'Valid client name, email, phone, event type, and event date are required.' });
     }
 
     const existingClient = await User.findOne({ email });
@@ -1075,6 +1091,7 @@ app.post('/api/projects', async (req, res) => {
       eventType,
       eventDate,
       venue,
+      budget: String(budget ?? '').trim(),
       requirements,
       teamInterest: [],
       eventTeam: [],
@@ -1163,6 +1180,7 @@ app.patch('/api/projects/:id/quote', async (req, res) => {
     project.clientResponse = undefined;
     project.negotiation = undefined;
     project.negotiationResponse = undefined;
+    project.contract = undefined;
 
     await project.save();
     res.json({ ok: true, project: project.toJSON() });
@@ -1201,6 +1219,8 @@ app.patch('/api/projects/:id/negotiation', async (req, res) => {
       sentAt: new Date().toISOString(),
       advancePercent: req.body.advancePercent,
     };
+    project.negotiationResponse = undefined;
+    project.contract = undefined;
 
     await project.save();
     res.json({ ok: true, project });
@@ -1302,6 +1322,36 @@ app.patch('/api/projects/:id/contract-details', async (req, res) => {
     res.json({ ok: true, project: project.toJSON() });
   } catch (error) {
     res.status(400).json({ ok: false, message: error.message });
+  }
+});
+
+app.patch('/api/projects/:id/contract-sign', async (req, res) => {
+  try {
+    if (!['admin', 'client'].includes(req.auth?.role)) {
+      return res.status(403).json({ ok: false, message: 'Only the client and admin may sign this contract.' });
+    }
+    const signature = String(req.body?.signature ?? '').trim();
+    if (signature.length < 2 || signature.length > 100) {
+      return res.status(400).json({ ok: false, message: 'Enter a signature name between 2 and 100 characters.' });
+    }
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, message: 'Project not found' });
+    if (project.clientResponse?.type !== 'ACCEPTED' && project.negotiationResponse?.type !== 'ACCEPTED') {
+      return res.status(400).json({ ok: false, message: 'Accept the quote or negotiation before signing the contract.' });
+    }
+
+    const signedAt = new Date().toISOString();
+    project.contract = {
+      ...(project.contract || {}),
+      ...(req.auth.role === 'admin'
+        ? { adminSignature: signature, adminSignedAt: signedAt }
+        : { clientSignature: signature, clientSignedAt: signedAt }),
+    };
+    await project.save();
+    return res.json({ ok: true, project: project.toJSON() });
+  } catch (error) {
+    return res.status(400).json({ ok: false, message: error.message });
   }
 });
 
@@ -1483,6 +1533,9 @@ app.patch('/api/projects/:id/pay-advance', async (req, res) => {
     if (project.clientResponse?.type !== 'ACCEPTED' && project.negotiationResponse?.type !== 'ACCEPTED') {
       return res.status(400).json({ ok: false, message: 'Accept the quote or negotiation before submitting payment proof.' });
     }
+    if (!project.contract?.adminSignedAt || !project.contract?.clientSignedAt) {
+      return res.status(400).json({ ok: false, message: 'Both the client and admin must sign the contract before payment.' });
+    }
 
     const screenshotDataUrl = String(req.body?.screenshotDataUrl ?? '');
     const screenshotFileName = String(req.body?.screenshotFileName ?? '').trim();
@@ -1581,11 +1634,24 @@ app.post('/api/projects/:id/team-interest', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Project not found' });
     }
 
-    const member = String(req.body?.member ?? '').trim();
-    const memberEmail = String(req.body?.memberEmail ?? '').trim().toLowerCase();
-    if (!member || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(memberEmail)) {
-      return res.status(400).json({ ok: false, message: 'A team member name and valid email are required.' });
+    if (req.auth?.role !== 'team') return res.status(403).json({ ok: false, message: 'An approved team account is required.' });
+    if (project.payment?.status !== 'PAID' || (project.clientResponse?.type !== 'ACCEPTED' && project.negotiationResponse?.type !== 'ACCEPTED')) {
+      return res.status(400).json({ ok: false, message: 'Interest is available only for confirmed events.' });
     }
+
+    const memberEmail = req.auth.sub;
+    const memberUser = await User.findOne({ email: memberEmail, role: 'team' }).select('name');
+    if (!memberUser) return res.status(403).json({ ok: false, message: 'An approved team account is required.' });
+
+    const conflictingEvent = await Project.exists({
+      _id: { $ne: project._id },
+      eventDate: project.eventDate,
+      $or: [
+        { teamInterest: { $elemMatch: { memberEmail, status: { $in: ['PENDING', 'ACCEPTED'] } } } },
+        { eventTeam: { $elemMatch: { memberEmail } } },
+      ],
+    });
+    if (conflictingEvent) return res.status(409).json({ ok: false, message: 'You can request or accept only one event on this date.' });
 
     const existingInterest = (project.teamInterest || []).find((item) => String(item.memberEmail).toLowerCase() === memberEmail);
     if (existingInterest?.status === 'PENDING' || existingInterest?.status === 'ACCEPTED') {
@@ -1593,7 +1659,7 @@ app.post('/api/projects/:id/team-interest', async (req, res) => {
     }
 
     const interest = {
-      member,
+      member: memberUser.name,
       memberEmail,
       requestedAt: new Date().toISOString(),
       status: 'PENDING',

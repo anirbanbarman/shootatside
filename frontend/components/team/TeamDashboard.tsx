@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import dayjs, { type Dayjs } from "dayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import Chip from "@mui/material/Chip";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
-import { formatDate, getProjectStatus } from "@/utils/status";
+import { formatDate, getLocalDateInputValue, getProjectStatus } from "@/utils/status";
 import { getWhatsAppUrl } from "@/utils/notifications";
 
 export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker" }) {
   const { projects, currentUser, requestTeamInterest, markLeaderArrived, toggleEventTrackerMember, toggleEventTrackerTask, updateEventDelay, sendEventTrackerMessage, markEventCompleted } = useProjectContext();
   const [delayNotes, setDelayNotes] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
+  const [eventDateFilter, setEventDateFilter] = useState("");
   const confirmedProjects = projects.filter((project) => getProjectStatus(project) === "PROJECT_CONFIRMED");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateInputValue();
   const visibleProjects = mode === "tracker"
     ? confirmedProjects.filter((project) => project.eventDate === today && project.eventTeam?.some((member) => member.memberEmail === currentUser?.email))
-    : confirmedProjects;
+    : confirmedProjects.filter((project) => !eventDateFilter || project.eventDate === eventDateFilter);
 
   return <div className="dashboard-shell">
     <section className="page-intro">
@@ -23,6 +27,7 @@ export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker"
     </section>
 
     <div className="panel">
+      {mode === "events" ? <div className="team-event-date-filter"><DatePicker label="Filter by event date" value={eventDateFilter ? dayjs(eventDateFilter) : null} onChange={(value: Dayjs | null) => setEventDateFilter(value?.isValid() ? value.format("YYYY-MM-DD") : "")} slotProps={{ textField: { size: "small", fullWidth: true } }} /></div> : null}
       {visibleProjects.length === 0 ? <div className="empty-state">{mode === "tracker" ? "No assigned events have a tracker for today." : "No client-confirmed events are available yet."}</div> : <div className="team-event-list">
         {visibleProjects.map((project) => {
           const interest = project.teamInterest?.find((item) => item.memberEmail === currentUser?.email);
@@ -38,14 +43,14 @@ export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker"
           const detailsUnlocked = daysUntilEvent >= 0 && daysUntilEvent <= 7;
           const userType = assignedMember?.userType ?? (assignedMember?.role === "Team Leader" ? "Team Leader" : "Member");
           const isTeamLeader = userType === "Team Leader";
-          const isEventDay = new Date().toISOString().slice(0, 10) === project.eventDate;
+          const isEventDay = getLocalDateInputValue() === project.eventDate;
           const tracker = project.eventTracker ?? { memberJoinedAt: {}, tasks: [], messages: [] };
           const completionWhatsApp = getWhatsAppUrl(project.client.phone, `Hello ${project.client.name}, your ${project.eventType} event has been completed. We will share your editing timeline soon.`);
 
-          return <article className="team-event" key={project.id}>
-            <div className="team-event-header"><div><p className="eyebrow">{project.id}</p><h3>{project.client.name}</h3></div><span className="pill">{isApprovedForMember ? "Approved" : hasPendingInterest ? "Pending" : hasRejectedInterest ? "Rejected" : "Available"}</span></div>
+          return <article className="team-event team-event-compact" key={project.id}>
+            <div className="team-event-header"><div><h3>{project.client.name}</h3><p className="team-event-subtitle">{project.eventType}</p></div><Chip size="small" label={isApprovedForMember ? "ACCEPTED" : hasPendingInterest ? "PENDING" : hasRejectedInterest ? "REJECTED" : "AVAILABLE"} color={isApprovedForMember ? "success" : hasPendingInterest ? "warning" : hasRejectedInterest ? "error" : "default"} variant="outlined" /></div>
             <div className="team-event-details">
-              <div><span>Event</span><strong>{project.eventType}</strong></div><div><span>Date</span><strong>{formatDate(project.eventDate)}</strong></div>
+              <div><span>Date</span><strong>{formatDate(project.eventDate)}</strong></div>
               {assignedMember ? <div><span>User Type</span><strong>{userType}</strong></div> : null}
               {isTeamLeader && detailsUnlocked ? <div><span>Address</span><strong>{project.venue}</strong></div> : null}
             </div>
@@ -56,7 +61,7 @@ export function TeamDashboard({ mode = "events" }: { mode?: "events" | "tracker"
               {isTeamLeader ? <><div><span>Client Phone</span><strong>{project.client.phone}</strong></div><div><span>Client Name</span><strong>{project.client.name}</strong></div><div><span>Address</span><strong>{project.venue}</strong></div><div className="team-event-assignment"><span>Team Members</span><strong>{project.eventTeam?.filter((member) => member.memberEmail !== currentUser?.email).map((member) => `${member.member} · ${member.memberPhone || "Phone not provided"} · ${member.role}`).join(", ") || "No other members assigned."}</strong></div></> : <><div><span>Team Leader Name</span><strong>{teamLeader?.member || "Not assigned"}</strong></div><div><span>Team Leader Phone</span><strong>{teamLeader?.memberPhone || "Not provided"}</strong></div></>}
             </div> : <div className="team-event-action"><p>Contact details will be visible 7 days before the event.</p></div> : <div className="team-event-action"><p>Admin approved your interest. Waiting for event team assignment.</p></div> : <div className="team-event-action">
               <p>{hasPendingInterest ? "Your interest is waiting for admin approval." : hasRejectedInterest ? "Admin rejected this request." : "Request access to see the full event brief."}</p>
-              {!hasPendingInterest && !hasRejectedInterest ? <button type="button" className="primary-button" onClick={async () => { const message = await requestTeamInterest(project.id); if (message) window.alert(message); }}>I&apos;m Interested</button> : null}
+              {mode === "events" && !hasPendingInterest && !hasRejectedInterest && !isApprovedForMember && !assignedMember ? <button type="button" className="primary-button" onClick={async () => { const message = await requestTeamInterest(project.id); if (message) window.alert(message); }}>I&apos;m Interested</button> : null}
             </div>}
 
             {assignedMember && isEventDay ? <div className="event-day-tracker">

@@ -16,6 +16,13 @@ export function formatDate(dateValue: string): string {
   });
 }
 
+export function getLocalDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function getProjectStatus(project: Project): ProjectStatus {
   if (project.payment?.status === "PAID" && (project.clientResponse?.type === "ACCEPTED" || project.negotiationResponse?.type === "ACCEPTED")) {
     return "PROJECT_CONFIRMED";

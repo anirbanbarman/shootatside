@@ -63,8 +63,10 @@ interface ProjectContextValue {
     eventType: string;
     eventDate: string;
     venue: string;
+    budget?: string;
     requirements: string;
   }) => void;
+  signContract: (projectId: string, signature: string) => Promise<void>;
   acceptClientRequest: (projectId: string) => Promise<void>;
   submitClientContactDetails: (projectId: string, details: Omit<ClientContactDetails, "submittedAt">) => Promise<void>;
   resetDemoProjects: () => void;
@@ -505,6 +507,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       eventType: string;
       eventDate: string;
       venue: string;
+      budget?: string;
       requirements: string;
     }) => {
       const payload = {
@@ -517,6 +520,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         eventType: input.eventType,
         eventDate: input.eventDate,
         venue: input.venue,
+        budget: input.budget,
         requirements: input.requirements,
       };
 
@@ -538,6 +542,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           eventType: input.eventType,
           eventDate: input.eventDate,
           venue: input.venue,
+          budget: input.budget,
           requirements: input.requirements,
         };
 
@@ -583,6 +588,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     });
     setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
   }, [currentUser]);
+
+  const signContract = useCallback(async (projectId: string, signature: string) => {
+    const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/contract-sign`, {
+      method: "PATCH",
+      body: JSON.stringify({ signature }),
+    });
+    setProjects((current) => current.map((project) => project.id === projectId ? response.project : project));
+  }, []);
 
   const acceptQuote = useCallback(async (projectId: string) => {
     const response = await fetchApi<{ ok: boolean; project: Project }>(`/projects/${encodeURIComponent(projectId)}/accept-quote`, {
@@ -880,6 +893,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       createProjectRequest,
       acceptClientRequest,
       submitClientContactDetails,
+      signContract,
       resetDemoProjects,
       seedDemoProject,
       sendQuote,
@@ -910,7 +924,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateEditingMilestone,
       deliverEditedFiles,
     }),
-    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, updateTeamCredentials, uploadTeamRegistrationImages, verifyAdvancePayment, view],
+    [acceptClientRequest, acceptNegotiation, acceptQuote, activeRole, addEventTrackerTask, approveEditorApplication, approveTeamInterest, approveTeamRegistration, assignEventTeam, assignEditor, assignTeam, createEditor, createProjectRequest, createTeamMember, currentUser, deliverEditedFiles, editorApplications, editors, isLoggedIn, isReady, loginAdmin, loginClient, loginEditor, loginTeam, logout, markEventCompleted, markLeaderArrived, markEditorDownloadComplete, payAdvance, projects, rejectEditorApplication, rejectNegotiation, rejectQuote, rejectTeamInterest, rejectTeamRegistration, registerTeam, requestTeamInterest, resetDemoProjects, seedDemoProject, selectedProjectId, sendEditingChatMessage, sendEventTrackerMessage, sendNegotiation, sendQuote, signContract, submitClientContactDetails, submitEditorApplication, teamMembers, teamRegistrations, toggleEventTrackerMember, toggleEventTrackerTask, updateClientTeamBrief, updateEditingMilestone, updateEditingSetup, updateEventDelay, updateTeamCredentials, uploadTeamRegistrationImages, verifyAdvancePayment, view],
   );
 
   return <ProjectContext.Provider value={value}>

@@ -11,11 +11,12 @@ import { EditingChat } from "@/components/common/EditingChat";
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { formatCurrency, formatDate } from "@/utils/status";
 import { getEditingMilestones, getEditingProgress } from "@/utils/notifications";
+import { downloadProjectContract } from "@/utils/downloadContract";
 import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 
 export function ClientDashboard() {
-  const { projects, currentUser, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, updateClientTeamBrief, submitClientContactDetails } = useProjectContext();
+  const { projects, currentUser, selectedProjectId, setSelectedProjectId, acceptQuote, rejectQuote, acceptNegotiation, rejectNegotiation, payAdvance, signContract, updateClientTeamBrief, submitClientContactDetails } = useProjectContext();
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isRequestFormModalOpen, setRequestFormModalOpen] = useState(false);
@@ -26,6 +27,8 @@ export function ClientDashboard() {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+  const [clientSignature, setClientSignature] = useState("");
+  const [isSigningContract, setIsSigningContract] = useState(false);
   const [isProcessingDecision, setIsProcessingDecision] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [paymentError, setPaymentError] = useState("");
@@ -52,6 +55,8 @@ export function ClientDashboard() {
   const currentQuote = selectedProject.negotiation ?? selectedProject.initialQuote;
   const advancePercent = currentQuote?.advancePercent ?? selectedProject.payment?.advancePercent ?? 30;
   const advanceAmount = selectedProject.payment?.amount ?? Math.round(((currentQuote?.amount ?? 0) * advancePercent) / 100);
+  const contractReady = Boolean(selectedProject.contract?.adminSignedAt && selectedProject.contract?.clientSignedAt);
+  const quoteAccepted = selectedProject.clientResponse?.type === "ACCEPTED" || selectedProject.negotiationResponse?.type === "ACCEPTED";
   const eventTeamLeader = selectedProject.eventTeam?.find((member) => (member.userType ?? (member.role === "Team Leader" ? "Team Leader" : "Member")) === "Team Leader");
   const eventDateStart = new Date(`${selectedProject.eventDate}T00:00:00`).getTime();
   const todayStart = new Date();
@@ -94,7 +99,7 @@ export function ClientDashboard() {
     setError("");
     try {
       await acceptQuote(selectedProject.id);
-      setFeedback("Quotation accepted successfully. Please complete the advance payment to confirm the booking.");
+      setFeedback("Quotation accepted. Review and sign the service contract before attaching your payment screenshot.");
       setConfirmModalOpen(false);
     } catch (decisionError) {
       setError(decisionError instanceof Error ? decisionError.message : "Unable to accept the quote. Please try again.");
@@ -104,6 +109,10 @@ export function ClientDashboard() {
   };
 
   const handlePayAdvance = async () => {
+    if (!contractReady) {
+      setPaymentError("Both parties must sign the contract before submitting payment.");
+      return;
+    }
     if (!paymentScreenshot) {
       setPaymentError("Upload a payment screenshot before submitting.");
       return;
@@ -134,6 +143,22 @@ export function ClientDashboard() {
       setPaymentError(submitError instanceof Error ? submitError.message : "Unable to submit payment screenshot. Please try again.");
     } finally {
       setIsSubmittingPayment(false);
+    }
+  };
+
+  const handleClientContractSign = async () => {
+    if (clientSignature.trim().length < 2) {
+      setError("Enter your full name as your electronic signature.");
+      return;
+    }
+    setIsSigningContract(true);
+    setError("");
+    try {
+      await signContract(selectedProject.id, clientSignature.trim());
+    } catch (signError) {
+      setError(signError instanceof Error ? signError.message : "Unable to sign the contract.");
+    } finally {
+      setIsSigningContract(false);
     }
   };
 
@@ -209,7 +234,7 @@ export function ClientDashboard() {
           <div className="panel-header space-between">
             <h3>My Requests</h3>
           </div>
-          <ProjectTable projects={clientProjects} onSelect={handleProjectSelect} selectedProjectId={selectedProjectId} />
+          <ProjectTable projects={clientProjects} onSelect={handleProjectSelect} selectedProjectId={selectedProjectId} hideProjectId />
         </div>
       </div>
 
@@ -252,10 +277,24 @@ export function ClientDashboard() {
                 <div><label>Event Type</label><p>{selectedProject.eventType}</p></div>
                 <div><label>Event Date</label><p>{formatDate(selectedProject.eventDate)}</p></div>
                 <div><label>Venue</label><p>{selectedProject.venue}</p></div>
+                {selectedProject.budget ? <div><label>Budget</label><p>{selectedProject.budget}</p></div> : null}
                 <div><label>Status</label><div className="status-inline"><StatusBadge project={selectedProject} /></div></div>
                 <div className="full-width"><label>Requirements</label><p>{selectedProject.requirements}</p></div>
               </div>
             </div>
+
+            {quoteAccepted ? <div className="section-block">
+              <p className="eyebrow">Service Contract</p>
+              <p>Review the agreed event details and sign before submitting payment.</p>
+              <div className="quote-box"><div className="quote-row"><strong>Event and date</strong><span>{selectedProject.eventType} · {formatDate(selectedProject.eventDate)}</span></div><div className="quote-row"><strong>Venue</strong><span>{selectedProject.venue}</span></div><div className="quote-row"><strong>Agreed quote</strong><span>{formatCurrency(currentQuote?.amount ?? 0)}</span></div><div className="quote-row"><strong>Requirements</strong><span>{selectedProject.requirements}</span></div></div>
+              <button type="button" className="secondary-button" onClick={() => downloadProjectContract(selectedProject)}>Download contract for review</button>
+              <div className="quote-box">
+                <div className="quote-row"><strong>Client signature</strong><span>{selectedProject.contract?.clientSignature ? `${selectedProject.contract.clientSignature} · signed` : "Pending"}</span></div>
+                <div className="quote-row"><strong>Admin signature</strong><span>{selectedProject.contract?.adminSignature ? `${selectedProject.contract.adminSignature} · signed` : "Pending"}</span></div>
+              </div>
+              {!selectedProject.contract?.clientSignedAt ? <div className="form-stack"><label htmlFor="client-contract-signature">Type your full name to sign</label><input id="client-contract-signature" autoComplete="name" value={clientSignature} onChange={(event) => setClientSignature(event.target.value)} /><button type="button" className="primary-button" disabled={isSigningContract} onClick={handleClientContractSign}>{isSigningContract ? "Signing…" : "Sign Contract"}</button></div> : null}
+              {contractReady ? <div className="success-box">Both signatures are complete. Download the contract above for your records.</div> : <div className="form-note">Payment is unavailable until both signatures are recorded.</div>}
+            </div> : null}
 
             {selectedProject.eventTeam?.length ? <div className="section-block">
               <p className="eyebrow">Event Checklist &amp; Updates</p>
@@ -325,10 +364,10 @@ export function ClientDashboard() {
                   </div>
                 )}
 
-                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
+                {!selectedProject.negotiation && selectedProject.clientResponse?.type === "ACCEPTED" && contractReady && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
                   <div className="cta-row">
                     <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
-                      Pay Advance {formatCurrency(advanceAmount)}
+                      Attach payment screenshot of {formatCurrency(advanceAmount)}
                     </button>
                   </div>
                 ) : null}
@@ -341,10 +380,10 @@ export function ClientDashboard() {
                   <div className="warning-box">Client rejected the quotation. Awaiting negotiation.</div>
                 ) : null}
 
-                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
+                {selectedProject.negotiation && selectedProject.negotiationResponse?.type === "ACCEPTED" && contractReady && (selectedProject.payment?.status ?? "PENDING") === "PENDING" ? (
                   <div className="cta-row">
                     <button type="button" className="success-button" onClick={() => setPayAdvanceModalOpen(true)}>
-                      Pay Advance {formatCurrency(advanceAmount)}
+                      Attach payment screenshot of {formatCurrency(advanceAmount)}
                     </button>
                   </div>
                 ) : null}
@@ -433,13 +472,13 @@ export function ClientDashboard() {
               Cancel
             </button>
             <button type="button" className="success-button" disabled={isSubmittingPayment} onClick={handlePayAdvance}>
-              {isSubmittingPayment ? "Submitting…" : `Pay ${formatCurrency(advanceAmount)}`}
+              {isSubmittingPayment ? "Submitting…" : `Attach payment screenshot of ${formatCurrency(advanceAmount)}`}
             </button>
           </>
         }
       >
         <div className="form-stack">
-          <p>After paying the advance, upload your payment screenshot for admin verification.</p>
+          <p>Pay the advance using your agreed payment method, then attach a screenshot for admin verification.</p>
           <p><strong>Amount to pay:</strong> {formatCurrency(advanceAmount)}</p>
           <div className="form-group">
             <label htmlFor="payment-screenshot">Payment screenshot</label>

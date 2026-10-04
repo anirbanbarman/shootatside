@@ -30,6 +30,13 @@ export interface ClientContactDetails {
   submittedAt: string;
 }
 
+export interface ProjectContract {
+  adminSignature?: string;
+  adminSignedAt?: string;
+  clientSignature?: string;
+  clientSignedAt?: string;
+}
+
 export interface Quote {
   amount: number;
   comment: string;
@@ -245,9 +252,11 @@ export interface Project {
   eventType: string;
   eventDate: string;
   venue: string;
+  budget?: string;
   requirements: string;
   requestAcceptedAt?: string;
   clientContactDetails?: ClientContactDetails;
+  contract?: ProjectContract;
   initialQuote?: Quote;
   clientResponse?: ClientResponse;
   negotiation?: Negotiation;

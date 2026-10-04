@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Box, Button } from "@mui/material";
+import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 
 import { useProjectContext } from "@/components/providers/ProjectProvider";
 import { TEAM_MEMBER_ROLES, type TeamMemberRole } from "@/types/project";
@@ -76,8 +78,8 @@ export function TeamRegistrationForm() {
         <div className="form-group"><label htmlFor="registration-whatsapp">WhatsApp Number</label><input id="registration-whatsapp" type="tel" required value={form.whatsapp} onChange={(event) => updateField("whatsapp", event.target.value)} /></div>
         <div className="form-group"><label htmlFor="registration-email">Email ID</label><input id="registration-email" type="email" required value={form.email} onChange={(event) => updateField("email", event.target.value)} /></div>
         <div className="form-group full"><label htmlFor="registration-address">Address</label><textarea id="registration-address" required value={form.address} onChange={(event) => updateField("address", event.target.value)} /></div>
-        <div className="form-group"><label htmlFor="registration-aadhar">Aadhar Card Upload</label><input id="registration-aadhar" type="file" accept="image/*,.pdf" required onChange={updateFile(setAadharFile)} />{aadharFile ? <small>{aadharFile.name}</small> : null}</div>
-        <div className="form-group"><label htmlFor="registration-selfie">Selfie</label><input id="registration-selfie" type="file" accept="image/*" required onChange={updateFile(setSelfieFile)} />{selfieFile ? <small>{selfieFile.name}</small> : null}</div>
+        <div className="form-group"><label htmlFor="registration-aadhar">Aadhar Card Upload</label><Box className="team-registration-upload"><Button component="label" variant="outlined" startIcon={<UploadFileOutlinedIcon />} fullWidth>{aadharFile ? "ID document selected" : "Upload ID image or PDF"}<input className="team-registration-file-input" id="registration-aadhar" type="file" accept="image/*,.pdf" required onChange={updateFile(setAadharFile)} /></Button><small>{aadharFile ? "File ready for submission" : "PNG, JPEG, or PDF · Max 2 MB"}</small></Box></div>
+        <div className="form-group"><label htmlFor="registration-selfie">Selfie</label><Box className="team-registration-upload"><Button component="label" variant="outlined" startIcon={<UploadFileOutlinedIcon />} fullWidth>{selfieFile ? "Selfie selected" : "Upload selfie"}<input className="team-registration-file-input" id="registration-selfie" type="file" accept="image/*" required onChange={updateFile(setSelfieFile)} /></Button><small>{selfieFile ? "File ready for submission" : "Image · Max 2 MB"}</small></Box></div>
         <div className="form-group"><label htmlFor="registration-phonepe">PhonePe Number</label><input id="registration-phonepe" type="tel" required value={form.phonePe} onChange={(event) => updateField("phonePe", event.target.value)} /></div>
         <div className="form-group full"><label>Preferred Team Roles</label><div className="role-checkbox-grid">{TEAM_MEMBER_ROLES.map((role) => <label className="check-item" key={role}><input type="checkbox" checked={preferredRoles.includes(role)} onChange={() => setPreferredRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role])} />{role}</label>)}</div></div>
       </div>
