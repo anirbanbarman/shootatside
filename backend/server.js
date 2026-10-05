@@ -305,6 +305,14 @@ function isValidEventDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+function hasUploadSignature(bytes, mimeType) {
+  if (mimeType === 'image/png') return bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === 'image/webp') return bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+  if (mimeType === 'application/pdf') return bytes.toString('ascii', 0, 5) === '%PDF-';
+  return false;
+}
+
 const seedDefaultUsers = async () => {
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   const defaults = [
@@ -776,8 +784,16 @@ app.post('/api/team/registrations', async (req, res) => {
     if (!validAadhar || !validSelfie) {
       return res.status(400).json({ ok: false, message: 'Upload a PNG, JPEG, WebP, or PDF ID and a PNG, JPEG, or WebP selfie.' });
     }
-    if (Buffer.from(validAadhar[3], 'base64').length > 2 * 1024 * 1024 || Buffer.from(validSelfie[2], 'base64').length > 2 * 1024 * 1024) {
+    const aadharBytes = Buffer.from(validAadhar[3], 'base64');
+    const selfieBytes = Buffer.from(validSelfie[2], 'base64');
+    if (aadharBytes.length === 0 || selfieBytes.length === 0) {
+      return res.status(400).json({ ok: false, message: 'ID document and selfie files cannot be empty.' });
+    }
+    if (aadharBytes.length > 2 * 1024 * 1024 || selfieBytes.length > 2 * 1024 * 1024) {
       return res.status(400).json({ ok: false, message: 'Each upload must be 2 MB or smaller.' });
+    }
+    if (!hasUploadSignature(aadharBytes, validAadhar[1].toLowerCase()) || !hasUploadSignature(selfieBytes, `image/${validSelfie[1].toLowerCase()}`)) {
+      return res.status(400).json({ ok: false, message: 'The selected file contents do not match the supported ID or selfie format.' });
     }
 
     const duplicate = await TeamRegistration.findOne({ email: String(payload.email).trim().toLowerCase(), status: { $ne: 'REJECTED' } });
@@ -850,9 +866,13 @@ app.patch('/api/team/registrations/:id/uploads', async (req, res) => {
       const fileName = String(req.body?.[nameField] ?? '').trim();
       const match = dataUrl.match(pattern);
       if (!match || !fileName) return res.status(400).json({ ok: false, message: `A valid ${nameField === 'aadharFileName' ? 'ID' : 'selfie'} file is required.` });
-      const byteLength = Buffer.from(match[base64Group], 'base64').length;
-      if (byteLength === 0 || byteLength > 2 * 1024 * 1024) {
+      const bytes = Buffer.from(match[base64Group], 'base64');
+      if (bytes.length === 0 || bytes.length > 2 * 1024 * 1024) {
         return res.status(400).json({ ok: false, message: 'Each uploaded file must be 2 MB or smaller.' });
+      }
+      const declaredMime = String(match[0].slice(5, match[0].indexOf(';')).toLowerCase());
+      if (!hasUploadSignature(bytes, declaredMime)) {
+        return res.status(400).json({ ok: false, message: 'The selected file contents do not match the supported upload format.' });
       }
       registration.set(dataField, dataUrl);
       registration.set(nameField, fileName);

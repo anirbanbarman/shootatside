@@ -1793,6 +1793,10 @@ button {
     padding: 12px 14px;
   }
 
+  .portal-header-client {
+    grid-template-areas: "menu brand user" "context context context" "client-user client-user client-user";
+  }
+
   .portal-mobile-menu-button.MuiIconButton-root {
     display: inline-flex;
     margin-left: -8px;
@@ -1822,6 +1826,20 @@ button {
     font-size: 0.68rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .portal-user.portal-user-client {
+    grid-area: client-user;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .portal-user.portal-user-client span {
+    max-width: none;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+    font-size: 0.78rem;
   }
 
   .portal-sidebar {

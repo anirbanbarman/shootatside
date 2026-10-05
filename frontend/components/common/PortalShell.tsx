@@ -105,10 +105,10 @@ export function PortalShell({ role, children }: { role: PortalRole; children: Re
 
   return (
     <div className={`portal-layout portal-layout-${role}`}>
-      <Box component="header" className="portal-header">
+      <Box component="header" className={`portal-header portal-header-${role}`}>
         <IconButton className="portal-mobile-menu-button" aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)} color="inherit">{mobileNavOpen ? <CloseIcon /> : <MenuIcon />}</IconButton>
         <Link href="/" className="portal-brand"><span className="portal-brand-mark">S</span><span>Studio Shoot at Sight</span></Link>
-        <div className="portal-user"><Typography component="span">{currentUser?.name ?? "Account"} ({role.charAt(0).toUpperCase() + role.slice(1)})</Typography><Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout}>Log out</Button></div>
+        <div className={`portal-user${role === "client" ? " portal-user-client" : ""}`}><Typography component="span">{role === "client" ? currentUser?.email ?? "" : `${currentUser?.name ?? "Account"} (${role.charAt(0).toUpperCase() + role.slice(1)})`}</Typography><Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout}>Log out</Button></div>
       </Box>
 
       <Box component="aside" className="portal-sidebar">
