@@ -1,764 +1,1435 @@
-. What is Generative AI? Key Concepts and Terminology 
-
-Generative AI refers to artificial intelligence systems that can create new content—such as text, images, audio, or code—that often appears indistinguishable from content created by humans. These systems learn patterns from existing data and use that knowledge to generate new, original outputs. 
-
-                                      
-
-                                                                    Gen AI Road Map 
-
-A list of text on a white background
-
-AI-generated content may be incorrect. 
-
- 
-
-Foundational Math 
-
-Linear Algebra 
-The study of vectors, matrices, and linear transformations. It's essential for representing and manipulating data in machine learning models. 
-
-Calculus 
-Focuses on change and motion. In ML, it's used to optimize models through derivatives and gradients (e.g., gradient descent). 
-
-Probability 
-Measures uncertainty and randomness. It helps models make predictions and decisions under uncertain conditions. 
-
-Statistics 
-Involves collecting, analyzing, and interpreting data. It's crucial for understanding data distributions and evaluating model performance. 
-
-Classical Machine Learning 
-
-Regression 
-A supervised learning technique used to predict continuous values (e.g., predicting house prices based on features).  
-
-Classification 
-A supervised learning task where the goal is to assign input data to predefined categories (e.g., spam vs. not spam). 
-
-Clustering 
-An unsupervised learning method that groups similar data points together without using labeled data (e.g., customer segmentation). 
-
-Support Vector Machine (SVM) 
-A powerful classification algorithm that finds the optimal boundary (hyperplane) between different classes. 
-
-Decision Trees 
-A model that splits data into branches based on feature values, leading to a decision outcome. Easy to interpret and visualize. 
-
-Discriminative AI 
-
-A category of machine learning models that focus on distinguishing between different classes of data. These models learn the boundary between categories and are used for tasks like classification and regression. 
-
-Examples: Logistic Regression, SVM, Decision Trees, Neural Networks (for classification) 
-
- 
-
- 
-
- 
-
-Deep Learning 
-
-Deep learning is a subset of machine learning that focuses on algorithms inspired by the structure and function of the human brain, called artificial neural networks. It’s particularly powerful for handling large amounts of unstructured data like images, audio, and text. 
-
-Neural Networks 
-Computational models inspired by the human brain. They consist of layers of interconnected nodes (neurons) that learn complex patterns. 
-
-Convolutional Neural Networks (CNNs) 
-Specialized neural networks for processing grid-like data such as images. They use convolutional layers to detect spatial features. 
-
-Recurrent Neural Networks (RNNs) 
-Designed for sequential data like time series or text. They maintain memory of previous inputs to inform current predictions. 
-
- 
-
-Practical uses: 
-
-Neural Networks: 
-
-Fraud Detection: Banks use neural networks to detect unusual patterns in transactions. 
-
-Medical Diagnosis: Predicting diseases from patient data (e.g., diabetes, cancer). 
-
-Customer Behavior Prediction: E-commerce platforms use them to recommend products. 
-
-Convolutional Neural Networks (CNNs) 
-
-Image Classification: Identifying objects in photos (e.g., cats vs. dogs). 
-
-Medical Imaging: Detecting tumors in X-rays or MRIs. 
-
-Facial Recognition: Used in security systems and social media tagging. 
-
-Autonomous Vehicles: Recognizing road signs, pedestrians, and other vehicles. 
-
- 
-
- 
-
-Recurrent Neural Networks (RNNs) 
-
-Natural Language Processing (NLP): Language translation, sentiment analysis, and chatbots. 
-
-Time Series Forecasting: Predicting stock prices, weather, or energy consumption. 
-
-Speech Recognition: Converting spoken words into text (e.g., Siri, Google Assistant). 
-
-Music Generation: Creating melodies based on learned patterns. 
-
- 
-
-Generative Models 
-
-Generative Adversarial Networks (GANs) 
-Consist of two networks—a generator and a discriminator—that compete. The generator creates data, and the discriminator evaluates it, leading to highly realistic outputs. 
-
-Variational Autoencoders (VAEs) 
-Encode input data into a compressed representation and then decode it back, learning to generate new data similar to the input. 
-
-Autoregressive Models 
-Predict the next element in a sequence based on previous elements. Used in language modeling and time series forecasting. 
-
-GPT (Generative Pretrained Transformer) 
-A type of autoregressive model based on the transformer architecture. It generates coherent and context-aware text by predicting the next token in a sequence. 
-
-LLMs (Large Language Models) 
-
-Advanced generative models trained on massive text datasets. Built on transformer architecture, they can perform a wide range of tasks such as answering questions, summarizing, translating, and generating text. 
-
-Examples: GPT-3, GPT-4, PaLM, LLaMA, Claude 
-
- 
-
-1. Self-Attention Mechanism 
-
-What it is: 
-A technique that allows a model to focus on different parts of a sentence when processing each word. 
-
-Simple analogy: 
-Imagine reading a sentence like: 
-"The cat sat on the mat because it was tired." 
-To understand what "it" refers to, your brain looks back at "cat." 
-Self-attention does the same — it helps the model decide which words are important to look at when understanding or generating text. 
-
-Why it matters in LLMs: 
-It enables models to understand context and relationships between words, even if they’re far apart in a sentence. 
-
- 
-
-2. Embedding 
-
-What it is: 
-A way to convert words or sentences into numbers (vectors) that capture their meaning. 
-
-Simple analogy: 
-Think of embedding as placing words on a map. Words with similar meanings (like "king" and "queen") are placed close together. 
-
-Why it matters in LLMs: 
-Embeddings allow models to compare meanings, find similarities, and understand context — not just match exact words. 
-
- 
-
-3. Transformer Model 
-
-What it is: 
-A type of neural network architecture that uses self-attention to process and generate text. 
-
-Simple analogy: 
-Imagine a smart assistant that reads a paragraph and instantly knows which parts are important, how they relate, and what to say next — that’s what a transformer does. 
-
-Why it matters in LLMs: 
-Transformers are the backbone of modern LLMs. They allow models to handle long-range dependencies, generate coherent text, and scale efficiently. 
-
- 
-
-4. Neural Network 
-
-What it is: 
-A system of interconnected "neurons" (mathematical functions) that learn patterns from data. 
-
-Simple analogy: 
-Like a brain made of math — it learns by adjusting connections based on examples. 
-
-Why it matters in LLMs: 
-Neural networks are the foundation of all deep learning models, including transformers. They learn how to predict the next word, answer questions, and more. 
-
- 
-
- 
-
- 
-
- 
-
-Advanced Generative AI Applications 
-
-Text Generation 
-Creating human-like text for chatbots, content writing, summarization, translation, and more. 
-Example: ChatGPT 
-
-Image Generation 
-Producing realistic or artistic images from text prompts using generative models. 
-Example: DALL·E, Midjourney 
-
-Code Generation 
-Automatically writing or completing code using AI trained on programming languages. 
-Example: GitHub Copilot 
-
-Multimodal AI 
-Combining multiple data types (e.g., text, images, audio) to understand and generate richer content. 
-Example: GPT-4 with vision, Gemini, CLIP 
-
-RAG (Retrieval-Augmented Generation) 
-Enhancing generative models by retrieving relevant external information before generating a response. 
-Example: Enterprise search assistants, domain-specific chatbots. 
-
- 
-
- 
-
- 
-
-  GPT-4 is ideal for tasks needing high precision and deep reasoning, like legal analysis or complex problem-solving.  
-
- GPT-4o is optimized for speed, cost-efficiency, and multimodal interaction, making it perfect for real-time applications, voice assistants, and tasks involving images or audio. 
-
- 
-
-RLHF stands for Reinforcement Learning from Human Feedback. 
-
-It’s a technique used to fine-tune large language models (LLMs) so they behave in ways that align better with human preferences and values.  
-
- 
-
- 
-
- 
-
-Creation of LLM: 
-
-Creating a Large Language Model (LLM) like GPT-3 involves a more complex and resource-intensive process than typical machine learning projects. While understanding the basic data science workflow is essential, developing an LLM requires additional steps, specialized knowledge, and significant computational resources. Here’s an overview of the process and additional considerations: 
-
-Steps to Create a Large Language Model (LLM) 
-
-Understanding the Problem Statement: 
-
-Objective: Define the goals and scope of the LLM. Determine what tasks the model should perform, such as text generation, translation, summarization, etc. 
-
-Example: Developing a model that can generate human-like text based on given prompts. 
-
-Data Collection: 
-
-Objective: Gather a massive and diverse dataset to train the LLM. This typically involves collecting text data from various sources such as books, articles, websites, and social media. 
-
-Example: Collecting billions of words from diverse sources to ensure the model learns a wide range of language patterns and contexts. 
-
-Data Cleaning and Preprocessing: 
-
-Objective: Clean and preprocess the data to ensure quality and consistency. This involves removing duplicates, filtering out inappropriate content, and tokenizing the text. 
-
-Example: Removing HTML tags, normalizing text, and converting it into a format suitable for training (e.g., tokenization). 
-
-Data Exploration and Analysis: 
-
-Objective: Analyze the data to understand its characteristics and ensure it is representative of the language patterns you want the model to learn. 
-
-Example: Analyzing the distribution of word frequencies, sentence lengths, and topics covered in the dataset. 
-
-Model Architecture Design: 
-
-Objective: Design the architecture of the LLM. This involves selecting the type of neural network (e.g., Transformer), the number of layers, the size of the model, and other hyperparameters. 
-
-Example: Designing a Transformer-based model with 175 billion parameters, similar to GPT-3. 
-
-Model Training: 
-
-Objective: Train the LLM on the collected data. This requires significant computational resources, such as powerful GPUs or TPUs, and can take weeks or months. 
-
-Example: Using distributed training across multiple GPUs/TPUs to handle the large-scale computations required for training the model. 
-
-Model Evaluation: 
-
-Objective: Evaluate the model’s performance using various metrics and benchmarks. This involves testing the model on tasks such as language understanding, text generation, and more. 
-
-Example: Evaluating the model’s performance on standard NLP benchmarks like GLUE, SuperGLUE, and others. 
-
-Fine-Tuning: 
-
-Objective: Fine-tune the model on specific tasks or domains to improve its performance. This involves additional training on smaller, task-specific datasets. 
-
-Example: Fine-tuning the model on a dataset of customer service interactions to improve its ability to generate helpful responses. 
-
-Deployment and Optimization: 
-
-Objective: Deploy the model to a production environment and optimize it for performance and scalability. This involves setting up infrastructure, monitoring, and continuous improvement. 
-
-Example: Deploying the model as an API that can handle high volumes of requests and optimizing it for low latency and high throughput. 
-
- 
-
-Additional Considerations 
-
-Computational Resources: Training an LLM requires significant computational power, often involving clusters of GPUs or TPUs. 
-
-Data Privacy and Ethics: Ensuring that the data used for training respects privacy and ethical guidelines. 
-
-Scalability: Designing the system to handle large-scale deployment and usage. 
-
-Maintenance: Continuously monitoring and updating the model to ensure it remains accurate and relevant. 
-
-Conclusion 
-
-While understanding the basic data science workflow is crucial, creating an LLM involves additional complexities and resources. It requires expertise in deep learning, access to large-scale computational resources, and careful consideration of ethical and practical issues. By following these steps and addressing these considerations, it is possible to develop and deploy a large language model. 
-
- 
-
- 
-
-How LLMs Are Created 
-
-1. Data Collection 
-
-LLMs are trained on massive datasets that include: 
-
-Public code repositories (like GitHub) 
-
-Text from books, websites, documentation 
-
-Forums like Stack Overflow 
-
-This helps the model learn patterns in language and code. 
-
-2. Tokenization 
-
-Text and code are broken down into smaller units called tokens (words, symbols, or parts of words). This makes it easier for the model to process and understand structure. 
-
-3. Model Architecture 
-
-Most LLMs use a Transformer architecture, which is designed to: 
-
-Understand context 
-
-Handle long-range dependencies in text/code 
-
-Generate coherent and relevant output 
-
-4. Training 
-
-The model is trained using unsupervised learning: 
-
-It tries to predict the next token in a sequence. 
-
-It adjusts its internal parameters (weights) based on how close its prediction was to the actual token. 
-
-This process is repeated billions of times across the dataset. 
-
-5. Fine-Tuning 
-
-After initial training, the model may be fine-tuned on specific tasks: 
-
-Code generation 
-
-Bug fixing 
-
-Documentation writing 
-
-This helps specialize the model for tools like GitHub Copilot. 
-
-6. Deployment 
-
-Once trained, the model is: 
-
-Hosted on powerful servers 
-
-Integrated into tools like Copilot via APIs 
-
-Continuously monitored and updated 
-
- 
-
-A screenshot of a computer
-
-AI-generated content may be incorrect. 
-
-A screenshot of a computer program
-
-AI-generated content may be incorrect. 
-
- 
-
-🔑 Key Differences Between LLMs 
-
-1. Training Data 
-
-GPT-4 (OpenAI): Trained on a mix of internet text, books, code, and more. Very broad and diverse. 
-
-Claude (Anthropic): Focuses on curated, high-quality data with safety in mind. 
-
-Gemini (Google): Uses Google-scale data, including search and YouTube transcripts. 
-
-LLaMA (Meta): Trained on open datasets like Common Crawl, Wikipedia, etc. 
-
-Codex (OpenAI): Specifically trained on public GitHub code for programming tasks. 
-
-2. Model Size & Architecture 
-
-GPT-4: Very large, multi-modal (can handle text and images). 
-
-Claude 3: Optimized for long context windows (can handle large documents). 
-
-LLaMA 3: Comes in various sizes (7B, 13B, etc.) for different use cases. 
-
-Mistral: Smaller, faster models optimized for edge devices and open-source use. 
-
-3. Specialization 
-
-Codex, StarCoder, Code LLaMA: Specialized for programming and code generation. 
-
-Command R (Cohere): Optimized for retrieval-augmented generation (RAG). 
-
-Jais, Yi: Focused on regional languages like Arabic and Chinese. 
-
-4. Capabilities 
-
-GPT-4, Claude 3, Gemini: Strong in reasoning, summarization, and multi-turn conversations. 
-
-Codex, StarCoder: Excellent at generating and understanding code. 
-
-Mistral, LLaMA: Good for research and open-source experimentation. 
-
-5. Access & Licensing 
-
-GPT-4, Claude, Gemini: Proprietary, accessed via APIs. 
-
-LLaMA, Mistral, StarCoder: Open-source, can be run locally. 
-
-Codex: Proprietary, used in GitHub Copilot. 
-
-6. Safety & Alignment 
-
-Anthropic’s Claude: Designed with safety and ethical alignment as a core goal. 
-
-OpenAI’s GPT-4: Includes safety mechanisms but is more general-purpose. 
-
-Google’s Gemini: Includes safety filters and integrates with Google’s ecosystem. 
-
- 
-
- 
-
- 
-
- 
-
- 
-
-Selecting the Right Foundation Model for Your Generative AI Application 
-
-Choosing the right foundation model is a critical step in building a successful generative AI solution. It determines how well your application performs, scales, and meets user expectations. A structured approach can help guide your decision-making process. 
-
- 
-
-1. Can AI Solve My Use Case? 
-
-Before selecting a model, ask: Can AI effectively address my use case? 
-
-With thousands of models available, the challenge is identifying one that fits your needs. Begin by exploring model catalogs such as: 
-
-Hugging Face – Offers a wide range of open-source models across domains. 
-
-GitHub – Hosts models from various developers and platforms. 
-
-Other AI platforms – Provide curated catalogs with deployment tools. 
-
-Model Types to Consider: 
-
-Large Language Models (LLMs) like GPT-4, Llama3 70B, and Mistral Large are ideal for complex tasks requiring deep reasoning and rich context understanding. 
-
-Small Language Models (SLMs) such as Phi3 and Llama3 8B are lightweight, cost-effective, and suitable for simpler tasks or edge deployments. 
-
-Modality and Task Focus: 
-
- 
-
-Text-based models (e.g., GPT-4) for chat, summarization, and content generation. 
-
-Reasoning models (e.g., DeepSeek-R1) for logic-heavy tasks like coding or strategy. 
-
-Multi-modal models (e.g., GPT-4o, Phi3-vision) for handling text, images, and audio. 
-
-Image generation models (e.g., DALL·E 3, Stability AI, Midjourney, Gemini NanoBanana) for visual content creation. 
-
-Embedding models (e.g., Ada, Cohere, SentenceTransformers (SBERT), Mistral-Embed) for semantic search and recommendation systems. 
-
-Function-calling models for structured data tasks like API automation or database queries. 
-
-(GPT-4 Turbo / GPT-4o / GPT-5 – Native support for function calling and tool use, 
-
-LangChain + OpenAI – Framework for building agentic systems with function calling.) 
-
- 
-
-Specialized Models: 
-
-Regional models (e.g., Core42 JAIS for Arabic, Mistral Large for European languages). 
-
-Domain-specific models (e.g., Nixtla TimeGEN-1 for time-series forecasting). 
-
- 
-
- 
-
- 
-
-Open vs. Proprietary Models: 
-
- 
-
-Proprietary models offer high performance, enterprise-grade support, and security. 
-
-Open-source models provide flexibility, customization, and cost-efficiency. 
-
-Open-Source Models 
-
-These models are publicly available, and their architecture, weights, and training data (or methodology) are often shared with the community. 
-
- Key Benefits: 
-
-Flexibility: You can modify, fine-tune, and deploy them as needed. 
-
-Cost-Efficiency: No licensing fees; ideal for budget-conscious projects. 
-
-Transparency: You can inspect how the model works and what data it was trained on. 
-
-Community Support: Active development and contributions from researchers and developers. 
-
- Examples: 
-
-LLaMA 2 / LLaMA 3 – Meta 
-
-Mistral 7B / Mixtral – Mistral AI 
-
-Falcon – TII 
-
-BLOOM – BigScience 
-
-BERT / RoBERTa / DistilBERT – Hugging Face 
-
- 
-
- Proprietary Models 
-
-These are developed and owned by companies. Their internal workings are not publicly disclosed, and access is typically provided via paid APIs or platforms. 
-
- Key Benefits: 
-
-High Performance: Often outperform open models in benchmarks. 
-
-Enterprise-Grade Support: SLAs, customer support, and integration tools. 
-
-Security & Compliance: Built-in features for data privacy and regulatory needs. 
-
-Optimized Infrastructure: Hosted on scalable, reliable platforms. 
-
-Examples: 
-
-GPT-4 / GPT-4o – OpenAI 
-
-Claude – Anthropic 
-
-Gemini – Google DeepMind 
-
-Command R+ – Cohere 
-
-Jurassic-2 – AI21 Labs 
-
- 
-
- 
-
- 
-
- 
-
- 
-
- 
-
-Choosing Between Them 
-
- 
-
-Criteria 
-
-Open-Source 
-
-Proprietary 
-
-Cost 
-
-Free or low-cost 
-
-Paid (API usage) 
-
-Customization 
-
-Full control 
-
-Limited or none 
-
-Performance 
-
-Good, improving 
-
-Often best-in-class 
-
-Transparency 
-
-High 
-
-Low 
-
-Deployment 
-
-Local or cloud 
-
-Cloud/API only 
-
-Support 
-
-Community-driven 
-
-Enterprise-grade 
-
- 
-
- 
-
- 
-
-2. How Do I Select the Best Model for My Use Case? 
-
-Once you know AI can help, the next step is choosing the most suitable model. Consider these filtering criteria: 
-
-Key Selection Criteria: 
-
-Task Type – What kind of input/output does your app require? Text, audio, video, or multi-modal? 
-
-Precision – Do you need a general-purpose base model or a fine-tuned model for specific tasks? 
-
-Openness – Do you want to fine-tune or customize the model? 
-
-Deployment – Will the model run locally, on the cloud, or via serverless endpoints? 
-
-Precision Matters: 
-
-Base models are versatile but may lack domain-specific accuracy. 
-
-Fine-tuned models are trained on specialized datasets for better relevance and precision. 
-
-Performance Evaluation: 
-
-Use benchmarks to compare models: 
-
-Accuracy – How well does the output match expected results? 
-
-Coherence – Does the output flow naturally? 
-
-Fluency – Is the language grammatically correct? 
-
-Groundedness – Is the output aligned with input data? 
-
-Semantic Similarity – How close is the output to the intended meaning? 
-
-Quality Index – Aggregate score comparing overall performance. 
-
-Cost – Token-based pricing to balance quality and budget. 
-
-Evaluation Methods: 
-
-Manual evaluation – Quick, subjective review of model responses. 
-
-Automated evaluation – Objective metrics like precision, recall, and F1 score using ground truth data. 
-
- 
-
- 
-
-3. Can I Scale for Real-World Workloads? 
-
-Once your model works well in testing, you need to prepare it for real-world use. This involves: 
-
- 
-
-Deployment Strategy 
-
-Choose where and how your model will run — locally, on cloud servers, or using serverless endpoints — to balance performance and cost. 
-
- 
-
-Monitoring & Optimization 
-
-Continuously track how the model performs (speed, accuracy, errors) and make improvements based on user feedback and system metrics. 
-
- 
-
- 
-
-Prompt Management 
-
-Refine and structure your prompts to get more accurate, relevant, and consistent responses from the model. 
-
- 
-
-Model Lifecycle Management 
-
-Regularly update your model, data, and application code to keep everything current and aligned with evolving needs. This is part of a broader process called GenAIOps (Generative AI Operations). 
-
-Responsible AI principles are a set of guidelines and values that ensure artificial intelligence systems are developed and used in ways that are ethical, fair, transparent, and beneficial to society. These principles are adopted by many organizations, including Microsoft, Google, and others, to guide the responsible development and deployment of AI technologies. 
-
-Core Responsible AI Principles 
-
-Here are the most widely recognized principles: 
-
-1. Fairness 
-
-AI systems should treat all people fairly and avoid bias. 
-
-Example: Avoiding discrimination in hiring tools or loan approvals. 
-
-2. Reliability & Safety 
-
-AI should perform reliably and safely under expected conditions. 
-
-Systems must be tested thoroughly to avoid harmful failures. 
-
-3. Privacy & Security 
-
-AI must protect user data and ensure privacy. 
-
-Data should be collected and used responsibly, with strong security measures. 
-
-4. Inclusiveness 
-
-AI should empower everyone and be accessible to people with diverse needs. 
-
-Example: Supporting multiple languages, accessibility features for people with disabilities. 
-
-5. Transparency 
-
-People should understand how AI systems work and how decisions are made. 
-
-This includes explainability and clear documentation. 
-
-6. Accountability 
-
-Developers and organizations must be accountable for their AI systems. 
-
-There should be mechanisms for redress if harm is caused. 
-
-A diagram of a core principles
-
-AI-generated content may be incorrect. 
-
- 
-
- 
+# Sonar MCP Server — Architecture & Rebuild Guide
+
+This document describes how the Sonar MCP Server is built and gives everything needed to recreate it from an empty directory. Part A explains the architecture. Part B is a step-by-step rebuild with the full contents of every file. Part C lists known gaps in the current code that you may want to fix while rebuilding.
+
+---
+
+# Part A — Architecture
+
+## A.1 What the system does
+
+The project is a **Model Context Protocol (MCP) server** written in Java 21 / Spring Boot 3.4 / Spring AI 1.0. An AI coding agent (GitHub Copilot in VS Code, or JetBrains AI Assistant) launches it as a child process and talks to it over **stdin/stdout using JSON-RPC** (the MCP STDIO transport).
+
+The server exposes two tools:
+
+| Tool | Purpose | Side effects |
+|---|---|---|
+| `sonar_list_issues` | Read-only query of SonarQube issues, enriched with rule descriptions | None |
+| `sonar_fix_issues` | Same data as `sonar_list_issues`, but its **tool description is an 11-step prompt** that tells the agent to fix the issues, build, commit, and open an Azure DevOps PR | None on the server; the *agent* performs all edits, git and PR actions |
+
+The key design idea: **the server only fetches data. The fixing workflow lives in the tool description**, which the agent reads as instructions. The server never touches the user's code, git, or Azure DevOps.
+
+## A.2 System context
+
+```
+┌──────────────────────────── Developer machine ─────────────────────────────┐
+│                                                                            │
+│  ┌──────────────────────┐   JSON-RPC over STDIO   ┌──────────────────────┐ │
+│  │  IDE AI agent        │ ──────────────────────▶ │  sonar-mcp-server    │ │
+│  │  (Copilot agent mode)│ ◀────────────────────── │  (java -jar ...)     │ │
+│  │                      │   tool results (JSON)   └──────────┬───────────┘ │
+│  │  • edits code        │                                    │ HTTPS GET   │
+│  │  • runs ./gradlew    │                                    │ Bearer token│
+│  │  • runs git          │                                    ▼             │
+│  │  • manage_todo_list  │                         ┌──────────────────────┐ │
+│  │                      │   JSON-RPC over STDIO   │  SonarQube server    │ │
+│  │                      │ ──────────────────────▶ │  /api/issues/search  │ │
+│  │                      │        ┌──────────────┐ │  /api/rules/show     │ │
+│  └──────────────────────┘        │ ADO MCP      │ └──────────────────────┘ │
+│             │                    │ (npx @azure- │                          │
+│             └──────────────────▶ │  devops/mcp) │ ──▶ Azure DevOps (PRs)   │
+│                                  └──────────────┘                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **sonar-mcp-server** (this project): reads SonarQube.
+- **ADO MCP server** (separate, third-party `@azure-devops/mcp`): used by the agent in step 11 via `mcp_ado_repo_create_pull_request`.
+- Both are registered side by side in the IDE's `mcp.json`.
+
+## A.3 Internal components
+
+```
+com.lexmark.sonar.mcp
+├── SonarMcpServerApplication      Boot entry point; wraps stdin for request logging;
+│                                  registers SonarQubeService's @Tool methods with MCP
+├── config
+│   ├── SonarProperties            @ConfigurationProperties("sonar"); validates URL + token at startup
+│   └── JacksonConfig              Provides a plain ObjectMapper bean
+├── client
+│   └── SonarQubeClient            java.net.http.HttpClient wrapper for the SonarQube REST API
+└── service
+    └── SonarQubeService           The two @Tool methods + project-key resolution + error JSON
+```
+
+Dependency graph (constructor injection, no cycles):
+
+```
+SonarMcpServerApplication ──@Bean ToolCallbackProvider──▶ SonarQubeService
+SonarQubeService ──▶ SonarQubeClient, SonarProperties, ObjectMapper
+SonarQubeClient  ──▶ SonarProperties, ObjectMapper
+```
+
+### Component responsibilities
+
+**`SonarMcpServerApplication`**
+- Replaces `System.in` with a `FilterInputStream` that logs every newline-terminated JSON-RPC message (`>>> Copilot MCP request: ...`) before Spring AI's STDIO transport reads it. This is a debugging aid only.
+- Declares a `ToolCallbackProvider` bean using `MethodToolCallbackProvider.builder().toolObjects(sonarService)`. Spring AI's MCP server auto-configuration picks up every `ToolCallbackProvider` bean and publishes its `@Tool` methods as MCP tools.
+
+**`SonarProperties`**
+- Binds `sonar.url`, `sonar.token`, `sonar.default-project-key`, `sonar.ssl-verify`. Spring's relaxed binding maps the env vars `SONAR_URL`, `SONAR_TOKEN`, `SONAR_DEFAULT_PROJECT_KEY`, `SONAR_SSL_VERIFY` onto these automatically, so `application.yml` does not declare them.
+- `@PostConstruct validate()` fails startup if the URL is missing/invalid or the token is missing.
+
+**`SonarQubeClient`**
+- One `HttpClient` (HTTP/1.1, 30 s connect timeout, 60 s request timeout).
+- When `sslVerify=false`, installs a trust-all `X509TrustManager` and disables hostname verification (for self-signed certs; development only).
+- Single private `get(path, params)` that URL-encodes params, sends `Authorization: Bearer <token>`, logs the request with the token redacted, logs the body only at DEBUG, maps 401/403/≥400 to `IOException`, and parses JSON with Jackson.
+- Public methods: `searchIssues`, `getRule` (used); `getIssue`, `getProjectMetrics` (currently unused).
+
+**`SonarQubeService`**
+- `sonar_list_issues(projectKey, severities, types, statuses, page, pageSize)`
+  1. Resolve the project key (see below).
+  2. Call `GET /api/issues/search` with `componentKeys`, `p`, `ps` (capped at 500, default 10), and `severities` / `types` / `statuses` (upper-cased, with defaults).
+  3. Build a slim summary per issue: `key, severity, type, message, rule, status, component, line, effort, creationDate, textRange`.
+  4. For each **distinct** rule key on the page, call `GET /api/rules/show` once and add `{name, htmlDesc, severity, remFnType, remFnBaseEffort}` to a `ruleDescriptions` map. Rule-fetch failures are logged and skipped.
+  5. Return pretty-printed JSON. Any exception becomes `{"error": "Failed to list issues: ..."}` (tools never throw to the MCP layer).
+- `sonar_fix_issues(projectKey, severities, types, page, pageSize)` — logs, then delegates to `listIssues` with statuses fixed to `OPEN,CONFIRMED,REOPENED` and page size default 10. All of its value is in its description (A.5).
+- `resolveProjectKey`: tool argument → `SONAR_DEFAULT_PROJECT_KEY` → error that tells the agent to look in `info.app.uid` of the target repo's `application.yml`/`.properties`, or ask the user. The key is always prefixed with `CLOUD_SERVICE:` if not already.
+
+## A.4 Request flow (one tool call)
+
+```
+Agent                     MCP STDIO transport          SonarQubeService        SonarQubeClient      SonarQube
+  │ tools/call sonar_fix_issues {page:1}                      │                       │                 │
+  ├──────────────────────────▶│ (line logged by stdin wrapper)│                       │                 │
+  │                           ├──── fixIssues(...) ──────────▶│                       │                 │
+  │                           │                               ├─ listIssues(...)      │                 │
+  │                           │                               ├─ resolveProjectKey    │                 │
+  │                           │                               ├─ searchIssues ───────▶├─ GET /api/issues/search ─▶│
+  │                           │                               │◀──────── JsonNode ────┤◀────────────────┤
+  │                           │                               ├─ for each unique rule:│                 │
+  │                           │                               │   getRule ───────────▶├─ GET /api/rules/show ────▶│
+  │                           │◀──── pretty JSON string ──────┤                       │                 │
+  │◀── result ────────────────┤                               │                       │                 │
+```
+
+Response shape:
+
+```json
+{
+  "projectKey": "CLOUD_SERVICE:my-service",
+  "total": 23, "page": 1, "pageSize": 10, "totalPages": 3,
+  "issues": [
+    { "key": "AY...", "severity": "CRITICAL", "type": "BUG", "message": "...",
+      "rule": "java:S2095", "status": "OPEN", "component": "proj:src/main/java/A.java",
+      "line": 42, "effort": "5min", "creationDate": "...",
+      "textRange": { "startLine": 42, "endLine": 42, "startOffset": 8, "endOffset": 30 } }
+  ],
+  "ruleDescriptions": {
+    "java:S2095": { "name": "...", "htmlDesc": "<p>...</p>", "severity": "BLOCKER",
+                    "remFnType": "CONSTANT_ISSUE", "remFnBaseEffort": "5min" }
+  }
+}
+```
+
+## A.5 The agent workflow (prompt-as-code)
+
+`sonar_fix_issues`'s description instructs the agent to run this loop. The server does not enforce any of it; it relies on the agent following instructions.
+
+```
+STEP 1  fetch page P (call sonar_fix_issues)         ── total == 0 → stop
+        on page 1: create todo list for all pages via manage_todo_list
+STEP 2  show issues as a markdown table
+STEP 3  git checkout -b sonar-fixes/<rules>-<YYYY-MM-DD>-<uid>       (page 1 only)
+STEP 4  create ./.sonar-fixes-progress-<branch>.md tracker           (page 1 only)
+STEP 5  add ".sonar-fixes-progress-*.md" to .gitignore               (page 1 only)
+STEP 6  fix every issue on the page using ruleDescriptions
+STEP 7  ./gradlew clean compileJava → clean codenarcMain → clean build
+        (fix and retry each up to 3×; skipping tests = "PARTIALLY DONE", stop)
+STEP 8  git commit "Fix sonar issues page P/T: <summary> - Fixed N issues"
+STEP 9  update tracker (progress row, detailed changes, issue table)
+STEP 10 P = P + 1, repeat 1,2,6–9 until P > totalPages
+STEP 11 git push origin -u <branch>; mcp_ado_repo_create_pull_request
+        PR body = Summary / Issues Fixed table / Build Validation
+```
+
+Global rules in the prompt: strict step order; max 3 retries per step; on stop, report failed step, error, attempts, page, done/not-done steps and required action.
+
+Note that STEP 7's commands assume the **target** project is a Gradle project with the CodeNarc plugin. Projects without `codenarcMain` will fail that step.
+
+## A.6 Cross-cutting concerns
+
+| Concern | How it is handled |
+|---|---|
+| **stdout purity** | MCP STDIO uses stdout for protocol frames. `logback-spring.xml` sends all logs to **stderr**; `application.yml` sets `web-application-type: none` and silences the auto-config report. Never `System.out.println` in this project. |
+| **Secrets** | Token comes only from env. Logged `Authorization` header is redacted. Response bodies logged only at DEBUG (the `com.lexmark.sonar` logger is DEBUG by default, so bodies *are* logged to stderr). |
+| **Errors** | Tools catch everything and return `{"error": ...}` so the agent sees a readable message instead of a JSON-RPC failure. |
+| **TLS** | Verified by default; `SONAR_SSL_VERIFY=false` disables cert and hostname checks. |
+| **Paging** | Server returns one page per call with `totalPages`; the agent loops. |
+| **API load** | One `/api/rules/show` call per distinct rule per page (no cross-call cache). |
+| **State** | Server is stateless. Workflow state lives in the agent's todo list and the `.sonar-fixes-progress-*.md` file in the target repo. |
+
+## A.7 Technology stack
+
+| Item | Version |
+|---|---|
+| Java toolchain | 21 |
+| Gradle wrapper | 8.12.1 |
+| Spring Boot plugin | 3.4.5 |
+| `io.spring.dependency-management` | 1.1.7 |
+| Spring AI BOM | 1.0.0 |
+| MCP starter | `org.springframework.ai:spring-ai-starter-mcp-server` (STDIO, SYNC) |
+| JSON | `com.fasterxml.jackson.core:jackson-databind` (version from Boot BOM) |
+| HTTP | JDK `java.net.http.HttpClient` |
+
+---
+
+# Part B — Rebuild from scratch
+
+## B.1 Prerequisites
+
+- JDK 21 on `PATH`
+- Gradle 8.x installed once (only to generate the wrapper), or copy a wrapper from another project
+- A SonarQube instance and a user token (SonarQube → avatar → My Account → Security → Generate token)
+- VS Code with GitHub Copilot (agent mode), plus Node.js if you want the ADO MCP server for PR creation
+
+## B.2 Target layout
+
+```
+sonar-mcp-server/
+├── .gitignore
+├── README.md
+├── build.gradle
+├── settings.gradle
+├── gradlew, gradlew.bat
+├── gradle/wrapper/
+│   ├── gradle-wrapper.jar
+│   └── gradle-wrapper.properties
+└── src/main/
+    ├── java/com/lexmark/sonar/mcp/
+    │   ├── SonarMcpServerApplication.java
+    │   ├── client/SonarQubeClient.java
+    │   ├── config/JacksonConfig.java
+    │   ├── config/SonarProperties.java
+    │   └── service/SonarQubeService.java
+    └── resources/
+        ├── application.yml
+        └── logback-spring.xml
+```
+
+## B.3 Step 1 — Create the project and wrapper
+
+```bash
+mkdir sonar-mcp-server && cd sonar-mcp-server
+git init
+mkdir -p src/main/java/com/lexmark/sonar/mcp/{client,config,service} src/main/resources
+gradle wrapper --gradle-version 8.12.1
+```
+
+`gradle wrapper` creates `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar` and `gradle-wrapper.properties`. **Commit `gradle-wrapper.jar`** — the `.gitignore` below ignores `*.jar`, so add it with `git add -f gradle/wrapper/gradle-wrapper.jar` (the current repo is missing this file; see Part C).
+
+## B.4 Step 2 — Build files
+
+`settings.gradle` (the root project name determines the jar name):
+
+```groovy
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        maven { url 'https://repo.spring.io/release' }
+        maven { url 'https://repo.spring.io/milestone' }
+    }
+}
+
+rootProject.name = 'sonar-mcp-server'
+```
+
+`build.gradle`:
+
+```groovy
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.lexmark.sonar'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/release' }
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:1.0.0"
+    }
+}
+
+dependencies {
+    // Spring AI MCP Server (STDIO transport)
+    implementation 'org.springframework.ai:spring-ai-starter-mcp-server'
+
+    // Jackson for JSON parsing of SonarQube API responses
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}
+
+// Produce a single executable fat-jar
+bootJar {
+    archiveFileName = "${rootProject.name}-${project.version}.jar"
+}
+
+// Run bootJar as part of the standard 'build' lifecycle
+build.dependsOn bootJar
+
+// Disable the plain jar to avoid confusion
+jar {
+    enabled = false
+}
+```
+
+`gradle/wrapper/gradle-wrapper.properties`:
+
+```properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.12.1-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+```
+
+`.gitignore` (note the `.sonar-fixes-progress-*.md` entry, which matches the tracker the workflow creates):
+
+```gitignore
+# Build and dependencies
+build/
+.gradle/
+out/
+target/
+/bin
+
+# Compiled Java files
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE - IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+*.iml
+out/
+
+# IDE - VS Code
+.vscode/
+*.code-workspace
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+
+# IDE - NetBeans
+nbproject/
+private/
+dist/
+build/
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor temp files
+*~
+*.swp
+*.swo
+*.swn
+*~
+.~*
+
+# SonarQube MCP tracking files (NOT to be committed)
+.sonar-fixes-progress-*.md
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+```
+
+## B.5 Step 3 — Resources
+
+`src/main/resources/application.yml` — turns off the web server, enables the STDIO MCP server, and sets server-level instructions sent to the client on `initialize`:
+
+```yaml
+logging:
+  level:
+    org.springframework.boot.autoconfigure: OFF  # Suppress Spring Boot autoconfiguration report
+    
+spring:
+  main:
+    web-application-type: none   # No embedded web server needed for STDIO MCP
+  ai:
+    mcp:
+      server:
+        name: sonar-mcp-server
+        version: 1.0.0
+        type: SYNC
+        stdio: true              # Enable STDIO transport for GitHub Copilot
+        instructions: |
+          MCP Server for SonarQube issue management and fixing.
+          
+          Available tools:
+            - sonar_list_issues: Query and list SonarQube issues (no fixing)
+            - sonar_fix_issues: Fix SonarQube issues with full 8-STEP workflow
+          
+          For detailed workflow instructions, see sonar_fix_issues tool description.
+          
+          ERROR HANDLING:
+            - Max 3 attempts per step before stopping
+            - Failed step will explicitly notify user with: "❌ FAILED - STEP X: [error details]"
+            - No proceeding to next step if current step fails after 3 attempts
+            - No proceeding to next page if current page fails
+
+# SonarQube connection - REQUIRED environment variables:
+#   SONAR_URL            - SonarQube base URL (REQUIRED)
+#   SONAR_TOKEN          - SonarQube user/project token (REQUIRED)
+# Optional environment variables:
+#   SONAR_DEFAULT_PROJECT_KEY - default project key (used if not provided in tool params)
+#   SONAR_SSL_VERIFY     - false to disable SSL verification (for self-signed certs)
+```
+
+`src/main/resources/logback-spring.xml` — **required**: routes every log line to stderr so stdout carries only MCP frames:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Logback config: redirect ALL logging to stderr so stdout stays clean for MCP STDIO protocol -->
+<configuration>
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDERR"/>
+    </root>
+
+    <!-- Reduce noise from Spring/Jackson internals -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="com.fasterxml.jackson" level="WARN"/>
+    <logger name="io.modelcontextprotocol" level="INFO"/>
+    <logger name="com.lexmark.sonar" level="DEBUG"/>
+</configuration>
+```
+
+## B.6 Step 4 — Configuration classes
+
+`src/main/java/com/lexmark/sonar/mcp/config/SonarProperties.java`:
+
+```java
+package com.lexmark.sonar.mcp.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import java.net.URL;
+
+/**
+ * Configuration properties for SonarQube connection.
+ * REQUIRED environment variables:
+ *   SONAR_URL          → sonar.url (REQUIRED)
+ *   SONAR_TOKEN        → sonar.token (REQUIRED)
+ * Optional:
+ *   SONAR_DEFAULT_PROJECT_KEY → sonar.default-project-key
+ *   SONAR_SSL_VERIFY   → sonar.ssl-verify (set to false for self-signed certs)
+ */
+@Component
+@ConfigurationProperties(prefix = "sonar")
+public class SonarProperties {
+
+    private String url;  // REQUIRED: must be provided via SONAR_URL environment variable
+    private String token;  // REQUIRED: must be provided via SONAR_TOKEN environment variable
+    // No default value for project key; must be provided
+    private String defaultProjectKey;
+    private boolean sslVerify = true;
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public String getDefaultProjectKey() {
+        return defaultProjectKey;
+    }
+
+    public void setDefaultProjectKey(String defaultProjectKey) {
+        this.defaultProjectKey = defaultProjectKey;
+    }
+
+    public boolean isSslVerify() {
+        return sslVerify;
+    }
+
+    public void setSslVerify(boolean sslVerify) {
+        this.sslVerify = sslVerify;
+    }
+
+    @PostConstruct
+    public void validate() {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException(
+                "SONAR_URL is REQUIRED but not provided. " +
+                "Set the environment variable: export SONAR_URL=https://your-sonar-instance");
+        }
+        try {
+            new URL(url).toURI();
+        } catch (Exception e) {
+            throw new IllegalArgumentException(
+                "SONAR_URL is invalid: " + url + ". Must be a valid URL (e.g., https://sonar.example.com)", e);
+        }
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException(
+                "SONAR_TOKEN is REQUIRED but not provided. " +
+                "Set the environment variable: export SONAR_TOKEN=your-token");
+        }
+    }
+}
+```
+
+`src/main/java/com/lexmark/sonar/mcp/config/JacksonConfig.java`:
+
+```java
+package com.lexmark.sonar.mcp.config;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class JacksonConfig {
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
+}
+```
+
+## B.7 Step 5 — SonarQube HTTP client
+
+`src/main/java/com/lexmark/sonar/mcp/client/SonarQubeClient.java`:
+
+```java
+package com.lexmark.sonar.mcp.client;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lexmark.sonar.mcp.config.SonarProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * HTTP client for the SonarQube REST API.
+ * Uses Java 11+ HttpClient with Bearer token authentication.
+ */
+@Component
+public class SonarQubeClient {
+
+    private static final Logger log = LoggerFactory.getLogger(SonarQubeClient.class);
+
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final SonarProperties props;
+
+    public SonarQubeClient(SonarProperties props, ObjectMapper objectMapper)
+            throws NoSuchAlgorithmException, KeyManagementException {
+        this.props = props;
+        this.objectMapper = objectMapper;
+        
+        // Validate required properties at startup
+        if (props.getUrl() == null || props.getUrl().isBlank()) {
+            throw new IllegalStateException(
+                "SonarQube URL is not configured. Set SONAR_URL environment variable.");
+        }
+        if (props.getToken() == null || props.getToken().isBlank()) {
+            throw new IllegalStateException(
+                "SonarQube token is not configured. Set SONAR_TOKEN environment variable.");
+        }
+        
+        this.httpClient = buildHttpClient(props.isSslVerify());
+        log.info("SonarQubeClient initialized successfully. URL: {}", props.getUrl());
+    }
+
+    // -----------------------------------------------------------------------
+    // Public API methods
+    // -----------------------------------------------------------------------
+
+    /**
+     * Search issues: GET /api/issues/search
+     * Supported params: componentKeys, severities, types, statuses, p, ps, s, asc
+     */
+    public JsonNode searchIssues(Map<String, String> params) throws IOException, InterruptedException {
+        return get("/api/issues/search", params);
+    }
+
+    /**
+     * Get a single issue by key with all additional fields.
+     */
+    public JsonNode getIssue(String issueKey) throws IOException, InterruptedException {
+        return get("/api/issues/search", Map.of(
+                "issues", issueKey,
+                "additionalFields", "_all"
+        ));
+    }
+
+    /**
+     * Get project quality metrics: GET /api/measures/component
+     */
+    public JsonNode getProjectMetrics(String projectKey, String metricKeys)
+            throws IOException, InterruptedException {
+        return get("/api/measures/component", Map.of(
+                "component", projectKey,
+                "metricKeys", metricKeys
+        ));
+    }
+
+    /**
+     * Get rule details: GET /api/rules/show
+     */
+    public JsonNode getRule(String ruleKey) throws IOException, InterruptedException {
+        return get("/api/rules/show", Map.of("key", ruleKey));
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal helpers
+    // -----------------------------------------------------------------------
+
+    private JsonNode get(String path, Map<String, String> params) throws IOException, InterruptedException {
+        String query = params.entrySet().stream()
+                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
+                        + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
+
+        String url = props.getUrl() + path + (query.isBlank() ? "" : "?" + query);
+        log.info("SonarQube GET: {}", url);
+
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(60))
+                .header("Accept", "application/json")
+                .GET();
+
+        if (props.getToken() != null && !props.getToken().isBlank()) {
+            requestBuilder.header("Authorization", "Bearer " + props.getToken());
+        }
+
+        HttpRequest request = requestBuilder.build();
+        log.info(">>> Request: {} {}", request.method(), request.uri());
+        request.headers().map().forEach((name, values) -> {
+            if ("Authorization".equalsIgnoreCase(name)) {
+                log.info(">>> Header: {}: Bearer [REDACTED]", name);
+            } else {
+                log.info(">>> Header: {}: {}", name, values);
+            }
+        });
+
+        HttpResponse<String> response = httpClient.send(
+                request, HttpResponse.BodyHandlers.ofString());
+        log.info("<<< Response: HTTP {}", response.statusCode());
+        // Only log response body at DEBUG level to avoid exposing sensitive project/issue data
+        if (log.isDebugEnabled()) {
+            log.debug("<<< Response body: {}", response.body());
+        }
+
+        if (response.statusCode() == 401) {
+            throw new IOException("SonarQube authentication failed. Check SONAR_TOKEN.");
+        }
+        if (response.statusCode() == 403) {
+            throw new IOException("SonarQube access denied. Token may lack permissions for this project.");
+        }
+        if (response.statusCode() >= 400) {
+            throw new IOException("SonarQube API error HTTP " + response.statusCode() + ": " + response.body());
+        }
+
+        return objectMapper.readTree(response.body());
+    }
+
+    private HttpClient buildHttpClient(boolean sslVerify)
+            throws NoSuchAlgorithmException, KeyManagementException {
+        HttpClient.Builder builder = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .version(HttpClient.Version.HTTP_1_1);
+
+        if (!sslVerify) {
+            log.warn("!!! SSL certificate verification is DISABLED. This is unsafe and should only be used for self-signed certs in development. Do NOT use in production.");
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, new TrustManager[]{
+                    new X509TrustManager() {
+                        public void checkClientTrusted(X509Certificate[] c, String a) { }
+                        public void checkServerTrusted(X509Certificate[] c, String a) { }
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                    }
+            }, new java.security.SecureRandom());
+            builder.sslContext(ctx);
+
+            // Disable hostname verification
+            SSLParameters sslParameters = new SSLParameters();
+            sslParameters.setEndpointIdentificationAlgorithm(null);
+            builder.sslParameters(sslParameters);
+        }
+
+        return builder.build();
+    }
+}
+```
+
+## B.8 Step 6 — MCP tools
+
+`src/main/java/com/lexmark/sonar/mcp/service/SonarQubeService.java`. The long `sonar_fix_issues` description is the workflow prompt from A.5; copy it exactly, since the agent's behaviour depends on its wording.
+
+```java
+package com.lexmark.sonar.mcp.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.lexmark.sonar.mcp.client.SonarQubeClient;
+import com.lexmark.sonar.mcp.config.SonarProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * MCP Tool definitions for SonarQube.
+ *
+ * GitHub Copilot can invoke this tool to fix SonarQube issues.
+ */
+@Service
+public class SonarQubeService {
+
+    private static final Logger log = LoggerFactory.getLogger(SonarQubeService.class);
+    private static final int DEFAULT_PAGE_SIZE = 10;
+
+    private final SonarQubeClient client;
+    private final SonarProperties props;
+    private final ObjectMapper mapper;
+
+    public SonarQubeService(SonarQubeClient client, SonarProperties props, ObjectMapper mapper) {
+        this.client = client;
+        this.props = props;
+        this.mapper = mapper;
+        log.info("=== SonarQubeService initialized - MCP tools ready ===");
+    }
+
+    // -----------------------------------------------------------------------
+    // Tool – List Issues (query-only, no fixing)
+    // -----------------------------------------------------------------------
+
+    @Tool(name = "sonar_list_issues",
+            description = """
+            Query and list SonarQube issues with optional filtering (QUERY ONLY - NO FIXING).
+            
+            This tool returns issues with complete information:
+            - File paths, line numbers, textRange for precise code location
+            - Rule keys and descriptions with remediation guidance
+            - Severity, type, status, and effort estimates
+            
+            CRITICAL: Does NOT apply fixes to code. For fixing, use sonar_fix_issues instead.
+            
+            USE WHEN:
+            - User asks to: list, show, query, display, or get issues (without fixing)
+            - User needs to review or analyze SonarQube issues
+            
+            DO NOT USE:
+            - When user asks to fix, solve, resolve, or correct issues (use sonar_fix_issues)
+            
+            DEFAULT FILTERS (if not specified):
+            - Severities: BLOCKER, CRITICAL, MAJOR
+            - Types: VULNERABILITY, BUG
+            - Statuses: OPEN, CONFIRMED, REOPENED
+            """)
+    public String listIssues(
+            @ToolParam(description = "SonarQube project key (e.g., CLOUD_SERVICE:my-service). " +
+                    "If not provided, will attempt to resolve from application configuration (application.yml/properties). " +
+                    "If not found in config, an error will be thrown.", required = false)
+            String projectKey,
+
+            @ToolParam(description = "Comma-separated severities to filter on: BLOCKER,CRITICAL,MAJOR,MINOR,INFO. " +
+                    "Defaults to BLOCKER,CRITICAL,MAJOR if not specified.", required = false)
+            String severities,
+
+            @ToolParam(description = "Comma-separated issue types: BUG,VULNERABILITY,CODE_SMELL. " +
+                    "Defaults to VULNERABILITY,BUG if not specified.", required = false)
+            String types,
+
+            @ToolParam(description = "Comma-separated statuses: OPEN,CONFIRMED,REOPENED. Default: OPEN,CONFIRMED,REOPENED.",
+                    required = false)
+            String statuses,
+
+            @ToolParam(description = "Page number (1-based). Default: 1.", required = false)
+            Integer page,
+
+            @ToolParam(description = "Page size (max 500). Default: 50.", required = false)
+            Integer pageSize) {
+
+        log.info(">>> [COPILOT TOOL CALL] sonar_list_issues | project='{}' severities='{}' types='{}' statuses='{}' page={} pageSize={}",
+                projectKey, severities, types, statuses, page, pageSize);
+        try {
+            String key = resolveProjectKey(projectKey);
+            Map<String, String> params = new HashMap<>();
+            params.put("componentKeys", key);
+            params.put("ps", String.valueOf(pageSize != null ? Math.min(pageSize, 500) : DEFAULT_PAGE_SIZE));
+            params.put("p", String.valueOf(page != null ? page : 1));
+
+            params.put("severities", (severities != null && !severities.isBlank())
+                    ? severities.toUpperCase()
+                    : "BLOCKER,CRITICAL,MAJOR");
+            params.put("types", (types != null && !types.isBlank())
+                    ? types.toUpperCase()
+                    : "VULNERABILITY,BUG");
+            params.put("statuses", statuses != null && !statuses.isBlank()
+                    ? statuses.toUpperCase()
+                    : "OPEN,CONFIRMED,REOPENED");
+
+            JsonNode response = client.searchIssues(params);
+
+            int total = response.path("total").asInt(0);
+            int currentPage = response.path("p").asInt(1);
+            int ps = response.path("ps").asInt(DEFAULT_PAGE_SIZE);
+            int totalPages = (total + ps - 1) / ps;
+
+            ArrayNode issues = (ArrayNode) response.path("issues");
+
+            ObjectNode result = mapper.createObjectNode();
+            result.put("projectKey", key);
+            result.put("total", total);
+            result.put("page", currentPage);
+            result.put("pageSize", ps);
+            result.put("totalPages", totalPages);
+
+            ArrayNode summaries = mapper.createArrayNode();
+            for (JsonNode issue : issues) {
+                ObjectNode summary = mapper.createObjectNode();
+                summary.put("key", issue.path("key").asText());
+                summary.put("severity", issue.path("severity").asText());
+                summary.put("type", issue.path("type").asText());
+                summary.put("message", issue.path("message").asText());
+                summary.put("rule", issue.path("rule").asText());
+                summary.put("status", issue.path("status").asText());
+                summary.put("component", issue.path("component").asText());
+                summary.put("line", issue.path("line").asInt(0));
+                summary.put("effort", issue.path("effort").asText("N/A"));
+                summary.put("creationDate", issue.path("creationDate").asText());
+                // Include text range so callers know the exact code location without an extra API call
+                if (!issue.path("textRange").isMissingNode()) {
+                    summary.set("textRange", issue.path("textRange"));
+                }
+                summaries.add(summary);
+            }
+            result.set("issues", summaries);
+
+            // Fetch rule descriptions once per unique rule key and include as a shared map.
+            // This replaces per-issue sonar_get_issue_detail calls when the goal is to fix issues.
+            Map<String, ObjectNode> ruleCache = new HashMap<>();
+            for (JsonNode issue : issues) {
+                String ruleKey = issue.path("rule").asText();
+                if (!ruleKey.isBlank() && !ruleCache.containsKey(ruleKey)) {
+                    try {
+                        JsonNode ruleResp = client.getRule(ruleKey);
+                        JsonNode rule = ruleResp.path("rule");
+                        ObjectNode ruleNode = mapper.createObjectNode();
+                        ruleNode.put("name", rule.path("name").asText());
+                        ruleNode.put("htmlDesc", rule.path("htmlDesc").asText());
+                        ruleNode.put("severity", rule.path("severity").asText());
+                        ruleNode.put("remFnType", rule.path("remFnType").asText());
+                        ruleNode.put("remFnBaseEffort", rule.path("remFnBaseEffort").asText());
+                        ruleCache.put(ruleKey, ruleNode);
+                    } catch (Exception re) {
+                        log.warn("Could not fetch rule '{}': {}", ruleKey, re.getMessage());
+                    }
+                }
+            }
+            if (!ruleCache.isEmpty()) {
+                ObjectNode ruleDescriptions = mapper.createObjectNode();
+                ruleCache.forEach(ruleDescriptions::set);
+                result.set("ruleDescriptions", ruleDescriptions);
+            }
+
+            log.info("<<< [COPILOT TOOL CALL] sonar_list_issues | returned {} issues (total={} page={}/{})",
+                    summaries.size(), total, currentPage, totalPages);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(result);
+        } catch (Exception e) {
+            log.error("!!! sonar_list_issues FAILED: {}", e.getMessage(), e);
+            return errorResponse("Failed to list issues: " + e.getMessage());
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Tool – Fix Issues (single-call fix workflow)
+    // -----------------------------------------------------------------------
+
+    @Tool(name = "sonar_fix_issues",
+            description = """
+                        PRIMARY TOOL FOR FIXING SONARQUBE ISSUES - STRICT SEQUENTIAL EXECUTION WITH MANDATORY BUILD VALIDATION AND PR CREATION.
+                        
+                        ⚠️ CRITICAL REMINDER: This workflow MUST end with PR creation in STEP 11. PR creation is NOT optional.
+                        If you complete STEP 1-10 but do NOT create a PR in STEP 11, the workflow is INCOMPLETE and you have FAILED.
+                        
+                        ⚠️ CRITICAL: This tool invokes a complete 11-STEP WORKFLOW. After the tool returns issue data, you MUST
+                        immediately continue executing STEP 2-11. Do NOT stop after receiving issue data.
+                        
+                        Invoke this tool when the user asks to fix, solve, resolve, or correct Sonar issues.
+                        Typical trigger phrases: "fix sonar issues", "solve sonar issues", "fix sonar", "fetch and fix sonar", "resolve sonar problems".
+
+                        This tool returns issue data: file paths, line numbers, textRange, messages, rule keys, and ruleDescriptions with remediation guidance.
+                        Tool call completion does NOT mean workflow completion - you must continue with STEP 2-11.
+
+                        ============================================================================
+                        ⚠️ CRITICAL CONSTRAINTS - FOLLOW EXACTLY (NO DEVIATIONS, NO HALLUCINATIONS)
+                        ============================================================================
+                        
+                        1. EXECUTE ONLY INSTRUCTIONS PROVIDED HERE - NO ASSUMPTIONS, NO EXTRA STEPS
+                           - Do NOT add steps beyond STEP 1-11
+                           - Do NOT invent alternative approaches
+                           - Do NOT skip or consolidate steps
+                           - Do NOT assume what the user wants - follow the defined workflow
+                        
+                        2. MANDATORY: CONTINUE WORKFLOW AFTER TOOL RETURNS ISSUES
+                           - Tool call returns issue data (STEP 1 output)
+                           - This is NOT the end - MUST immediately continue with STEP 2-11
+                           - Do NOT stop after receiving issue data
+                           - Do NOT wait for user confirmation
+                           - Immediately proceed to STEP 2 (Display issues)
+                           - This is NON-NEGOTIABLE
+                        
+                        3. MANDATORY: DISPLAY TODO LIST IN COPILOT UI
+                           - MUST create and display todo list using manage_todo_list tool on Page 1
+                           - MUST show todo list in Copilot UI throughout entire workflow execution
+                           - MUST update todo status (in-progress/completed/failed) IMMEDIATELY after each step
+                           - MUST display updated todo list after EVERY step completion
+                           - This is NON-NEGOTIABLE - cannot skip, must always show progress
+                        
+                        4. MARK EACH EXECUTION CLEARLY IN WORKFLOW TRACKING
+                           - Use todo list: ⏳ (in-progress), ✅ (completed), ❌ (failed)
+                           - Box current step execution with clear labels
+                           - Show page number and page totals (e.g., "Page 2 of 5")
+                           - Update todo status IMMEDIATELY after each step completes
+                        
+                        5. NO HALLUCINATIONS - STICK TO INSTRUCTIONS ONLY
+                           - If unclear: report what's in the instructions, nothing else
+                        
+                        6. IF SOMETHING IS NOT IN INSTRUCTIONS - DON'T DO IT
+                           - Report error if instructions don't cover a scenario
+
+                        ============================================================================
+                        EXECUTION MODEL - STRICT SEQUENTIAL STEPS (NO SKIPS, NO OUT-OF-ORDER EXECUTION)
+                        ============================================================================
+                        
+                        UI PROGRESS TRACKING:
+                        Use manage_todo_list tool to create and update a todo list for visual progress in Copilot UI.
+                        On Page 1, create todos upfront as INDIVIDUAL STEP ENTRIES (see STEP 1 for detailed examples).
+                        Mark each step as "in-progress" when starting, then "completed" immediately after finishing.
+                        This shows FULL workflow scope with individual step visibility and file changes next to progress.
+                        
+                        EXAMPLE (PAGE 1: 9 steps, PAGE 2+: 6 steps, FINAL: STEP 11):
+                        PAGE 1 (all 9 steps):
+                        - "Page 1: STEP 1" (Fetch issues)
+                        - "Page 1: STEP 2" (Display issues)
+                        - "Page 1: STEP 3" (Create branch)
+                        - "Page 1: STEP 4" (Create tracking file)
+                        - "Page 1: STEP 5" (Update .gitignore)
+                        - "Page 1: STEP 6" (Fix issues)
+                        - "Page 1: STEP 7" (Build validation)
+                        - "Page 1: STEP 8" (Commit)
+                        - "Page 1: STEP 9" (Update tracking file)
+                        
+                        PAGE 2+ (create 6 todos for each page - repeat pattern for pages 2, 3, 4, 5, ... N):
+                        - "Page 2: STEP 1" (Fetch issues)
+                        - "Page 2: STEP 2" (Display issues)
+                        - "Page 2: STEP 6" (Fix issues)
+                        - "Page 2: STEP 7" (Build validation)
+                        - "Page 2: STEP 8" (Commit)
+                        - "Page 2: STEP 9" (Update tracking file)
+                        
+                        - "Page 3: STEP 1" (Fetch issues)
+                        - "Page 3: STEP 2" (Display issues)
+                        - "Page 3: STEP 6" (Fix issues)
+                        - "Page 3: STEP 7" (Build validation)
+                        - "Page 3: STEP 8" (Commit)
+                        - "Page 3: STEP 9" (Update tracking file)
+                        
+                        (Repeat for all remaining pages: 4, 5, ..., N)
+
+                        FINAL TODO (last item):
+                        - "STEP 11: Create PR"
+                        
+                        STEP 1: Fetch issues for current page. Record workflow start time on page 1 only.
+                                If total=0, display "No issues found" and STOP (no todos created - nothing to fix).
+                                If total>0, CREATE TODO LIST FOR ALL PAGES using manage_todo_list tool:
+                                - Create todos based on the pattern shown in UI PROGRESS TRACKING
+                                - Page 1: Create all 9 step todos (STEP 1-9)
+                                - Page 2, 3, 4+: Create 6 step todos each (STEP 1, 2, 6, 7, 8, 9)
+                                - FINAL: Create "STEP 11: Create PR" todo LAST
+                                Return: total, page, pageSize, totalPages, issues, ruleDescriptions.
+                                CRITICAL: IMMEDIATELY after STEP 1 completes, update todos - mark "Page <N>: STEP 1" as ✅ completed using manage_todo_list (where N = current page).
+                        
+                        STEP 2: Display issues as markdown table (| # | Severity | Type | File | Message | Rule |).
+                                Show "Showing X of Y total issues (page P of T pages)". Continue to next step immediately.
+                                CRITICAL: IMMEDIATELY after STEP 2 completes, update todos - mark "Page <N>: STEP 2" as ✅ completed using manage_todo_list (where N = current page).
+                        
+                        STEP 3: [MANDATORY] Create working branch (PAGE 1 ONLY). Format: sonar-fixes/<rule-names>-<YYYY-MM-DD>-<uid>.
+                                Command: git checkout -b <branch-name>. SKIP on page 2+.
+                                CRITICAL: IMMEDIATELY after STEP 3 completes (only on Page 1), update todos - mark "Page 1: STEP 3" as ✅ completed using manage_todo_list.
+                        
+                        STEP 4: Create tracking markdown file ./.sonar-fixes-progress-<branch-name>.md (PAGE 1 ONLY).
+                                File path: ./.sonar-fixes-progress-<branch-name>.md
+                                Include: project key, branch, timestamp, total issues, pages. Progress Tracker table.
+                                SKIP on page 2+.
+                                CRITICAL: IMMEDIATELY after STEP 4 completes (only on Page 1), update todos - mark "Page 1: STEP 4" as ✅ completed using manage_todo_list.
+                        
+                        STEP 5: Update .gitignore (PAGE 1 ONLY). Add line .sonar-fixes-progress-*.md if not present.
+                                SKIP on page 2+.
+                                CRITICAL: IMMEDIATELY after STEP 5 completes (only on Page 1), update todos - mark "Page 1: STEP 5" as ✅ completed using manage_todo_list.
+                        
+                        STEP 6: Fix all issues on current page. Use ruleDescriptions to apply fixes. Verify no false positives.
+                                Track files modified and fixes applied. Format: src/path/File.java:42 - Description - Rule S1234.
+                                CRITICAL: IMMEDIATELY after STEP 6 completes (all issues fixed), update todos - mark "Page <N>: STEP 6" as ✅ completed using manage_todo_list (where N = current page).
+                        
+                        STEP 7: [MANDATORY BUILD VALIDATION] Execute build commands in order (all 3 MUST succeed):
+                                7a. ./gradlew clean compileJava
+                                7b. ./gradlew clean codenarcMain
+                                7c. ./gradlew clean build (includes tests & integTest - tests MUST run and pass, if they fail fix the test or code)
+                                
+                                FAILURE RECOVERY FOR EACH SUB-STEP (7a, 7b, 7c):
+                                When ANY sub-step (7a, 7b, or 7c) fails:
+                                1. Analyze error output to identify root cause
+                                2. For 7a (compileJava): fix compilation errors in code
+                                3. For 7b (codenarcMain): fix CodeNarc style violations
+                                4. For 7c (build with tests): fix test code OR production code that broke tests OR build configuration/dependency issues
+                                5. Rerun the SAME failed sub-step (e.g., if 7b failed, rerun 7b only)
+                                6. If successful: continue to next sub-step
+                                7. If still fails: retry up to 3 times TOTAL per sub-step
+                                8. If fails after 3 retries: STOP WORKFLOW IMMEDIATELY
+                                9. After fix is applied, do NOT skip back to previous step - continue from current step
+                                
+                                PARTIAL COMPLETION RULE:
+                                If build passes by excluding tests or integration tests (e.g., using -x test, -x integTest flags)
+                                rather than actually fixing the underlying issue, you MUST:
+                                - Mark STEP 7 as "PARTIALLY DONE ⚠️" (NOT fully completed)
+                                - Explicitly state what was skipped (e.g., "Tests excluded", "Integration tests skipped")
+                                - DO NOT proceed to STEP 8 (Commit)
+                                - STOP the workflow and report the issue
+                                Note: Tests MUST run and pass with the actual fixes, not be bypassed.
+                                
+                                CRITICAL: IMMEDIATELY after STEP 7 completes (all 7a-7c succeed with full validation), update todos - mark "Page <N>: STEP 7" as ✅ completed using manage_todo_list (where N = current page).
+                                CRITICAL: If STEP 7 is only partially done (tests skipped), report as "PARTIALLY DONE ⚠️ - [specify what was skipped]" and do NOT mark as completed.
+                        
+                        STEP 8: Commit fixes (ONLY IF STEP 7 SUCCEEDS). Message: "Fix sonar issues page P/T: <summary> - Fixed N issues".
+                                Commit code changes only (NOT .sonar-fixes-progress-*.md). Record commit hash.
+                                CRITICAL: IMMEDIATELY after STEP 8 completes (commit done), update todos - mark "Page <N>: STEP 8" as ✅ completed using manage_todo_list (where N = current page).
+                        
+                        STEP 9: Update ./.sonar-fixes-progress-<branch-name>.md (ONLY IF STEP 8 SUCCEEDS).
+                                File: ./.sonar-fixes-progress-<branch-name>.md
+                                Update Progress Tracker row: status, files, rules fixed, commit hash.
+                                Add Detailed Changes section grouped by file. Add Issues Details table.
+                                Display updated ./.sonar-fixes-progress-<branch-name>.md file.
+                                CRITICAL: IMMEDIATELY after STEP 9 completes (tracking updated), update todos - mark "Page <N>: STEP 9" as ✅ completed using manage_todo_list (where N = current page).
+                        
+                        STEP 10: Loop for remaining pages (ONLY IF STEP 9 COMPLETES). After page P completes STEP 9, move to P+1.
+                                 Execute STEP 1-9 for each new page (2, 3, 4, ..., N). 
+                                 For EVERY page (not just page 1), create 6 individual todos: STEP 1, 2, 6, 7, 8, 9.
+                                 Mark each todo in-progress then completed as it executes.
+                                 Continue until all pages processed.
+                                 DO NOT proceed to STEP 11 until final page STEP 9 is done.
+                                 CRITICAL: For each page N (2, 3, 4+), update todos IMMEDIATELY after EVERY step completes using manage_todo_list.
+                        
+                        STEP 11: Create PR (ONCE after ALL pages done). THIS IS MANDATORY - DO NOT SKIP.
+                                 CRITICAL INSTRUCTION: You MUST create a pull request in Azure DevOps. This is the FINAL step and CANNOT be skipped.
+                                 
+                                 1. First: Push the branch: git push origin -u <branch-name>
+                                 2. THEN: Create a pull request using mcp_ado_repo_create_pull_request tool with:
+                                    - repositoryId: The repository ID from your Azure DevOps project
+                                    - sourceRefName: refs/heads/<branch-name> (the branch you just pushed)
+                                    - targetRefName: refs/heads/main (or appropriate target branch)
+                                    - title: "Fix SonarQube issues - <branch-name>"
+                                    - description: MANDATORY FORMAT (see below)
+                                 
+                                 MANDATORY PR FORMAT:
+                                 Title: "Fix SonarQube issues - <branch-name>"
+                                 Description MUST include these 3 sections in order:
+                                 
+                                 1. ## Summary
+                                    - Total issue count: X
+                                    - Total pages processed: Y
+                                    - Severity breakdown: Z BLOCKER, A CRITICAL, B MAJOR
+                                    - Type breakdown: C BUG, D VULNERABILITY, E CODE_SMELL
+                                 
+                                 2. ## Issues Fixed
+                                    Table: | # | Severity | Type | File | Message | Issue | Fix Applied |
+                                    Include ALL issues from ALL pages in ONE table (not grouped by rule/page).
+                                    Do NOT use narrative text like "Fixed by..." or "EQ_OVERRIDING issues:".
+                                    Table format only.
+                                 
+                                 3. ## Build Validation
+                                    ✓ All changes compile successfully
+                                    ✓ CodeNarc analysis passes
+                                    ✓ Full build validation successful
+                                    ✓ No new issues introduced
+                                 
+                                 FAILURE HANDLING FOR PR CREATION:
+                                 - If mcp_ado_repo_create_pull_request fails, retry ONCE 
+                                 - If still fails after retry, report the specific error and Azure DevOps response
+                                 - report failure instead
+                                 
+                                 Read ./.sonar-fixes-progress-<branch-name>.md as source of truth for all issue details.
+                                 CRITICAL: IMMEDIATELY after STEP 11 completes (PR created successfully), update todos - mark "STEP 11: Create PR" as ✅ completed using manage_todo_list.
+                                 CRITICAL: PR CREATION IS MANDATORY - IT IS NOT OPTIONAL AND CANNOT BE SKIPPED.
+
+                        ============================================================================
+                        FAILURE HANDLING & ERROR REPORTING (MANDATORY)
+                        ============================================================================
+                        
+                        WHEN WORKFLOW STOPS, REPORT:
+                        1. Failed step (e.g., "STEP 7 (Build) failed")
+                        2. Error message/reason
+                        3. Retry attempts exhausted (e.g., "3/3")
+                        4. Current page/total pages (e.g., "Page 2 of 5")
+                        5. Completed steps: "Page 1: STEP 1-9 ✓ (committed: abc123)"
+                        6. Failed step: "Page 2: STEP 7 ✗ (build failed)"
+                        7. Not attempted: "Page 2: STEP 8-9" or "Page 3-5: All steps"
+                        8. Action required: specific fix needed
+                        
+                        RETRY BEHAVIOR:
+                        - STEP 7 (Build): Attempt fix + retry up to 3 times. If fixed → continue to STEP 8.
+                                          If still fails → STOP with error report.
+                        - OTHER STEPS: Retry up to 3 times. If fails → STOP with error report.
+                        - ALWAYS include error report when stopping.
+
+                        ============================================================================
+                        WORKFLOW PROGRESSION RULES
+                        ============================================================================
+                        - Execute STEP 1-11 IN STRICT SEQUENCE (no skips, no out-of-order).
+                        - STEP 7 BUILD MUST SUCCEED before STEP 8.
+                        - Complete page 100% (STEP 1-9) before next page.
+                        - Don't skip: branch (STEP 3), ./.sonar-fixes-progress-*.md (STEP 4, 9), build (STEP 7),
+                          commit (STEP 8), or PR (STEP 11).
+                        
+                        *** CRITICAL: STEP 11 (CREATE PR IN AZURE DEVOPS) IS MANDATORY AND CANNOT BE SKIPPED ***
+                        *** If you skip STEP 11, the workflow is INCOMPLETE. You MUST create the PR using mcp_ado_repo_create_pull_request. ***
+                        *** Do NOT report success or completion until the PR has been created in Azure DevOps. ***
+
+                        DEFAULT PARAMETERS
+                        Severities: BLOCKER,CRITICAL,MAJOR | Types: VULNERABILITY,BUG
+                        Statuses: OPEN,CONFIRMED,REOPENED | PageSize: 10
+            \"\"\")
+            """)
+    public String fixIssues(
+            @ToolParam(description = "SonarQube project key (e.g., CLOUD_SERVICE:my-service). " +
+                    "If not provided, will attempt to resolve from application configuration (application.yml/properties). " +
+                    "If not found in config, an error will be thrown.", required = false)
+            String projectKey,
+
+            @ToolParam(description = "Comma-separated severities: BLOCKER,CRITICAL,MAJOR,MINOR,INFO. " +
+                    "Default: BLOCKER,CRITICAL,MAJOR", required = false)
+            String severities,
+
+            @ToolParam(description = "Comma-separated types: BUG,VULNERABILITY,CODE_SMELL. " +
+                    "Default: VULNERABILITY,BUG", required = false)
+            String types,
+
+            @ToolParam(description = "Page number (1-based). Default: 1.", required = false)
+            Integer page,
+
+            @ToolParam(description = "Page size (max 500). Default: 10.", required = false)
+            Integer pageSize) {
+
+        log.info(">>> [COPILOT TOOL CALL] sonar_fix_issues | project='{}' severities='{}' types='{}' page={} pageSize={}",
+                projectKey, severities, types, page, pageSize);
+        int effectivePageSize = pageSize != null ? pageSize : 10;
+        return listIssues(projectKey, severities, types, "OPEN,CONFIRMED,REOPENED", page, effectivePageSize);
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    private String resolveProjectKey(String provided) {
+        String key = null;
+        if (provided != null && !provided.isBlank()) {
+            key = provided;
+        } else if (props.getDefaultProjectKey() != null && !props.getDefaultProjectKey().isBlank()) {
+            key = props.getDefaultProjectKey();
+        } 
+        
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException(
+                "No SonarQube project key provided or found.\n" +
+                "How to fix: " +
+                "\n  1. Get it from info.app.uid in application.yml, application.yaml or application.properties file, " +
+                "\n  2. If not found in application yml or property file then ask the user to give the service name" );
+        }
+        // If the key does not start with 'CLOUD_SERVICE:', prepend it
+        if (!key.startsWith("CLOUD_SERVICE:")) {
+            key = "CLOUD_SERVICE:" + key;
+        }
+        return key;
+    }
+
+
+    private String errorResponse(String message) {
+        try {
+            ObjectNode err = mapper.createObjectNode();
+            err.put("error", message);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(err);
+        } catch (Exception e) {
+            return "{\"error\":\"" + message.replace("\"", "'") + "\"}";
+        }
+    }
+}
+```
+
+## B.9 Step 7 — Application entry point
+
+`src/main/java/com/lexmark/sonar/mcp/SonarMcpServerApplication.java`:
+
+```java
+package com.lexmark.sonar.mcp;
+
+import com.lexmark.sonar.mcp.service.SonarQubeService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+
+@SpringBootApplication
+public class SonarMcpServerApplication {
+
+    private static final Logger mcpLog = LoggerFactory.getLogger("MCP-STDIO");
+
+    public static void main(String[] args) {
+        System.setIn(loggingStdin(System.in));
+        SpringApplication app = new SpringApplication(SonarMcpServerApplication.class);
+        app.run(args);
+        
+        // Signal that the MCP server is ready
+        mcpLog.info("======================================================================");
+        mcpLog.info("MCP SERVER STARTED - Ready for requests");
+        mcpLog.info("Available tools: sonar_list_issues, sonar_fix_issues");
+        mcpLog.info("======================================================================");
+    }
+
+    /**
+     * Wraps stdin so every complete newline-terminated JSON-RPC line from Copilot is logged.
+     */
+    private static InputStream loggingStdin(InputStream delegate) {
+        return new FilterInputStream(delegate) {
+            private final ByteArrayOutputStream buf = new ByteArrayOutputStream();
+
+            @Override
+            public int read() throws IOException {
+                int b = in.read();
+                if (b == '\n') {
+                    mcpLog.info(">>> Copilot MCP request: {}", buf.toString(StandardCharsets.UTF_8));
+                    buf.reset();
+                } else if (b != -1) {
+                    buf.write(b);
+                }
+                return b;
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                int n = in.read(b, off, len);
+                if (n > 0) {
+                    for (int i = off; i < off + n; i++) {
+                        if (b[i] == '\n') {
+                            mcpLog.info(">>> Copilot MCP request: {}", buf.toString(StandardCharsets.UTF_8));
+                            buf.reset();
+                        } else {
+                            buf.write(b[i]);
+                        }
+                    }
+                }
+                return n;
+            }
+        };
+    }
+
+    /**
+     * Registers all @Tool-annotated methods from SonarQubeService as MCP tools.
+     * GitHub Copilot will discover and invoke these tools to query SonarQube.
+     */
+    @Bean
+    public ToolCallbackProvider sonarToolCallbackProvider(SonarQubeService sonarService) {
+        return MethodToolCallbackProvider.builder().toolObjects(sonarService).build();
+    }
+}
+```
+
+## B.10 Step 8 — Build
+
+```bash
+./gradlew build
+# → build/libs/sonar-mcp-server-1.0.0.jar
+```
+
+## B.11 Step 9 — Smoke-test the server without an IDE
+
+Startup fails fast without the env vars, so set them first. The server reads JSON-RPC lines from stdin:
+
+```bash
+export SONAR_URL=https://sonar.example.com
+export SONAR_TOKEN=<your-token>
+export SONAR_DEFAULT_PROJECT_KEY=my-service      # becomes CLOUD_SERVICE:my-service
+
+{
+  echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cli","version":"0"}}}'
+  echo '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+  echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+  echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sonar_list_issues","arguments":{"pageSize":2}}}'
+  sleep 10
+} | java -jar build/libs/sonar-mcp-server-1.0.0.jar 2>server.log
+```
+
+Expected: stdout contains only JSON-RPC responses (the `tools/list` result names both tools; the `tools/call` result contains the issues JSON). `server.log` contains the logs. If any log text shows up on stdout, the logback file is not being picked up.
+
+## B.12 Step 10 — Register in VS Code
+
+Command Palette → **MCP: Open User Configuration** (global) or create `.vscode/mcp.json` (per repo):
+
+```json
+{
+  "inputs": [
+    { "id": "ado_org", "type": "promptString", "description": "Azure DevOps organization name" },
+    { "id": "sonar_token", "type": "promptString", "description": "SonarQube token", "password": true }
+  ],
+  "servers": {
+    "sonar-mcp": {
+      "type": "stdio",
+      "command": "java",
+      "args": ["-jar", "/absolute/path/to/sonar-mcp-server-1.0.0.jar"],
+      "env": {
+        "SONAR_URL": "https://your-sonarqube-host",
+        "SONAR_TOKEN": "${input:sonar_token}",
+        "SONAR_SSL_VERIFY": "true"
+      }
+    },
+    "ado": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp", "${input:ado_org}"]
+    }
+  }
+}
+```
+
+Using an `inputs` prompt for the token keeps it out of the file. Then **MCP: List Servers → sonar-mcp → Start** (and the same for `ado`). In Copilot Chat (agent mode), ask *"list sonar issues"* to test the read-only tool, or *"fix sonar issues"* to run the full workflow.
+
+## B.13 Configuration reference
+
+| Env var | Property | Required | Default | Notes |
+|---|---|---|---|---|
+| `SONAR_URL` | `sonar.url` | yes | — | Base URL, no trailing `/api` |
+| `SONAR_TOKEN` | `sonar.token` | yes | — | Sent as `Bearer` |
+| `SONAR_DEFAULT_PROJECT_KEY` | `sonar.default-project-key` | no | — | `CLOUD_SERVICE:` prefix added automatically |
+| `SONAR_SSL_VERIFY` | `sonar.ssl-verify` | no | `true` | `false` disables cert + hostname checks |
+
+Tool parameter defaults: severities `BLOCKER,CRITICAL,MAJOR`; types `VULNERABILITY,BUG`; statuses `OPEN,CONFIRMED,REOPENED`; page `1`; page size `10` (max 500).
+
+## B.14 Extending the server
+
+To add a tool:
+1. Add a method to `SonarQubeClient` for the new SonarQube endpoint (reuse `get`).
+2. Add a public method to `SonarQubeService` annotated `@Tool(name = "sonar_...", description = "...")` with `@ToolParam` parameters. Return a JSON `String`; catch exceptions and return `errorResponse(...)`.
+3. Mention the tool in `spring.ai.mcp.server.instructions` and in the startup log line in `SonarMcpServerApplication`.
+
+No registration code is needed; `MethodToolCallbackProvider` discovers all `@Tool` methods on the service.
+
+---
+
+# Part C — Known gaps in the current code
+
+These are behaviours of the code as it stands today. The listings in Part B reproduce it **as-is**; fix these when rebuilding if you want a cleaner result.
+
+| # | Where | Issue | Suggested fix |
+|---|---|---|---|
+| 1 | `README.md` | The sample `mcp.json` contains what looks like a real SonarQube token (`squ_…`), and it is in git history. | Revoke that token in SonarQube; replace it with a placeholder or `${input:...}` as in B.12. |
+| 2 | repo / `.gitignore` | `gradle/wrapper/gradle-wrapper.jar` is not committed (`*.jar` is ignored), so `./gradlew` fails on a fresh clone. | `git add -f gradle/wrapper/gradle-wrapper.jar`, or add `!gradle/wrapper/gradle-wrapper.jar` to `.gitignore`. |
+| 3 | `SonarQubeService` `sonar_fix_issues` description | The text block ends with a stray `\"\"\")` line, so the literal `""")` is sent to the agent as part of the description. | Delete that line. |
+| 4 | `SonarQubeService.listIssues` | `pageSize` param says "Default: 50" but the code default is 10. | Make the description say 10. |
+| 5 | `application.yml` | `instructions` says "8-STEP workflow"; the tool defines 11 steps. | Update to 11. |
+| 6 | `WORKFLOW.md` | Sections 2–7 describe an older 8-step numbering, a different tracker format and different build commands from the tool description. | Regenerate from the tool description (the description is what the agent actually follows). |
+| 7 | `SonarProperties` / `SonarQubeClient` | URL/token validation is done twice. `new URL(String)` is deprecated since Java 20. | Keep the `@PostConstruct` check only; use `URI.create(url).toURL()`. |
+| 8 | `resolveProjectKey` | Always prepends `CLOUD_SERVICE:`, so projects with other key formats can't be queried. | Make the prefix configurable (e.g. `SONAR_PROJECT_KEY_PREFIX`). |
+| 9 | `SonarQubeClient` | `getIssue` and `getProjectMetrics` are unused. | Remove, or expose as tools. |
+| 10 | `logback-spring.xml` | `com.lexmark.sonar` at DEBUG means full SonarQube response bodies are written to stderr, which the IDE may capture in its output panel. | Set it to INFO by default. |
+| 11 | Workflow STEP 7 | Hard-codes `codenarcMain`; non-Groovy/CodeNarc projects fail the build step. | Make it conditional ("if the task exists") or parameterise the build commands. |
+| 12 | Tests | There are no tests. | Add a unit test for `SonarQubeService` with a mocked `SonarQubeClient`, and a `@SpringBootTest` that asserts both tools are registered. |
